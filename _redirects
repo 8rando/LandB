@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects for LanIMS SPA
+
+# Handle client-side routing - redirect all routes to index.html
+/* /index.html 200
+
+# Optional: redirect old routes if you had any
+# /old-path /new-path 301

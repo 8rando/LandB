@@ -1,15 +1,18 @@
 import { Outlet } from 'react-router';
-import { AuthProvider } from '../context/AuthContext';
-import { DataProvider } from '../context/DataContext';
+import { SupabaseAuthProvider } from '../context/SupabaseAuthContext';
+import { SupabaseDataProvider } from '../context/SupabaseDataContext';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Toaster } from 'sonner';
 
 export function Root() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <Outlet />
-        <Toaster position="top-right" />
-      </DataProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <SupabaseAuthProvider>
+        <SupabaseDataProvider>
+          <Outlet />
+          <Toaster position="top-right" />
+        </SupabaseDataProvider>
+      </SupabaseAuthProvider>
+    </ErrorBoundary>
   );
 }

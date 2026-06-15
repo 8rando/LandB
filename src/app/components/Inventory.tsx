@@ -1,7 +1,7 @@
 import { useState, useMemo, KeyboardEvent } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Button } from './ui/Button';
+import { Button } from './ui/button';
 import { Input } from './ui/Input';
 import { Plus, Search, Edit2, Trash2, X, Tag } from 'lucide-react';
 import { Product, ItemType } from '../types';

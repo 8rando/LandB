@@ -1,7 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { Root } from './components/Root';
 import { Layout } from './components/Layout';
-import { Login } from './components/Login';
+import { SupabaseLogin } from './components/SupabaseLogin';
+import { DatabaseSetup } from './components/DatabaseSetup';
 import { Dashboard } from './components/Dashboard';
 import { Inventory } from './components/Inventory';
 import { Checkout } from './components/Checkout';
@@ -9,7 +10,7 @@ import { Invoices } from './components/Invoices';
 import { BulkUpload } from './components/BulkUpload';
 import { Settings } from './components/Settings';
 import { UserManagement } from './components/UserManagement';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { SupabaseProtectedRoute } from './components/SupabaseProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -17,13 +18,17 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <Login />,
+        element: <SupabaseLogin />,
+      },
+      {
+        path: '/setup',
+        element: <DatabaseSetup />,
       },
       {
         element: (
-          <ProtectedRoute>
+          <SupabaseProtectedRoute>
             <Layout />
-          </ProtectedRoute>
+          </SupabaseProtectedRoute>
         ),
         children: [
           {
@@ -33,9 +38,9 @@ export const router = createBrowserRouter([
           {
             path: '/inventory',
             element: (
-              <ProtectedRoute allowedRoles={['admin', 'cashier']}>
+              <SupabaseProtectedRoute allowedRoles={['admin', 'cashier']}>
                 <Inventory />
-              </ProtectedRoute>
+              </SupabaseProtectedRoute>
             ),
           },
           {
@@ -49,25 +54,25 @@ export const router = createBrowserRouter([
           {
             path: '/bulk-upload',
             element: (
-              <ProtectedRoute allowedRoles={['admin']}>
+              <SupabaseProtectedRoute allowedRoles={['admin']}>
                 <BulkUpload />
-              </ProtectedRoute>
+              </SupabaseProtectedRoute>
             ),
           },
           {
             path: '/users',
             element: (
-              <ProtectedRoute allowedRoles={['admin']}>
+              <SupabaseProtectedRoute allowedRoles={['admin']}>
                 <UserManagement />
-              </ProtectedRoute>
+              </SupabaseProtectedRoute>
             ),
           },
           {
             path: '/settings',
             element: (
-              <ProtectedRoute allowedRoles={['admin']}>
+              <SupabaseProtectedRoute allowedRoles={['admin']}>
                 <Settings />
-              </ProtectedRoute>
+              </SupabaseProtectedRoute>
             ),
           },
         ],

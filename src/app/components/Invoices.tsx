@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Search, Eye, Printer, CheckCircle, XCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice, Settings } from '../types';

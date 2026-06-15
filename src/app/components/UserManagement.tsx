@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Users, Plus, Trash2, KeyRound, X, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 

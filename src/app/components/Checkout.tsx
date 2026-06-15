@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Search, Plus, Minus, Trash2, ShoppingCart, Tag, Pencil, Check, User } from 'lucide-react';
 import { InvoiceItem, ItemType, PaymentType } from '../types';
 import { toast } from 'sonner';

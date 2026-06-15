@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Settings as SettingsIcon, Save, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { toast } from 'sonner';
 

@@ -224,3 +224,28 @@ drop policy if exists "Authenticated users can insert settings" on business_sett
 
 create policy "Authenticated users can insert settings" on business_settings
     for insert with check (auth.role() = 'authenticated');
+
+-- activities.user_id, invoices.created_by, and stock_movements.user_id all
+-- reference user_profiles(id) with no ON DELETE behavior (defaults to
+-- RESTRICT), so deleting any user who has ever made a sale or logged an
+-- activity fails with "violates foreign key constraint ..._fkey". Switch
+-- them to SET NULL so the historical record survives but the user can be
+-- deleted.
+alter table activities drop constraint if exists activities_user_id_fkey;
+alter table activities add constraint activities_user_id_fkey
+    foreign key (user_id) references user_profiles(id) on delete set null;
+
+alter table invoices drop constraint if exists invoices_created_by_fkey;
+alter table invoices add constraint invoices_created_by_fkey
+    foreign key (created_by) references user_profiles(id) on delete set null;
+
+-- stock_movements is defined in supabase-schema.sql but may not exist in
+-- every environment yet, so guard this one to keep the script re-runnable.
+do $$
+begin
+    if to_regclass('public.stock_movements') is not null then
+        alter table stock_movements drop constraint if exists stock_movements_user_id_fkey;
+        alter table stock_movements add constraint stock_movements_user_id_fkey
+            foreign key (user_id) references user_profiles(id) on delete set null;
+    end if;
+end $$;

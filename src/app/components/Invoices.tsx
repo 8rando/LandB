@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useData } from '../context/DataContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Eye, Printer, CheckCircle, XCircle, X } from 'lucide-react';
@@ -338,7 +338,7 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 
 // ── Invoices list ─────────────────────────────────────────────────────────────
 export function Invoices() {
-  const { invoices, updateInvoice, settings } = useData();
+  const { invoices, updateInvoice, settings } = useSupabaseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 

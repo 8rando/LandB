@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import {
   Upload,
@@ -124,8 +124,8 @@ function buildWorkbook(dataRows: (string | number)[][], sheetName = 'Items'): XL
 
 // ── Component ────────────────────────────────────────────────────────────────
 export function BulkUpload() {
-  const { products, upsertProducts, addActivity } = useData();
-  const { user } = useAuth();
+  const { products, upsertProducts, addActivity } = useSupabaseData();
+  const { user } = useSupabaseAuth();
 
   const [step, setStep] = useState<Step>('upload');
   const [fileName, setFileName] = useState('');

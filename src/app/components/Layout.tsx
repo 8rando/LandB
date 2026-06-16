@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
 import {
   LayoutDashboard,
   Package,
@@ -25,8 +25,8 @@ const NAV_ITEMS = [
 ];
 
 export function Layout() {
-  const { user, logout } = useAuth();
-  const { settings } = useData();
+  const { user, signOut } = useSupabaseAuth();
+  const { settings } = useSupabaseData();
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
 
@@ -35,8 +35,8 @@ export function Layout() {
 
   const filteredNav = NAV_ITEMS.filter(item => item.roles.includes(user?.role || ''));
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 

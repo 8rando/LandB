@@ -1,13 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
-import { authService, usersService, AuthUser, UserRole } from '../../services/supabase'
+import { authService, usersService, databaseService, settingsService, AuthUser, UserRole } from '../../services/supabase'
 
 interface SupabaseAuthContextType {
   user: AuthUser | null
   loading: boolean
   session: Session | null
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  signUp: (email: string, password: string, username: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>
+  signUp: (email: string, password: string, username: string) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>
@@ -118,7 +118,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { user: authUser, session, error } = await authService.signIn(email, password)
+      const { error } = await authService.signIn(email, password)
 
       if (error) {
         const next = failedAttempts + 1
@@ -145,8 +145,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (
     email: string,
     password: string,
-    username: string,
-    role: UserRole = 'cashier'
+    username: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       if (username.trim().length < 3) {
@@ -161,10 +160,18 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Username already exists' }
       }
 
-      const { user: authUser, error } = await authService.signUp(email, password, username, role)
+      // The first account ever registered becomes the administrator
+      const { userCount } = await databaseService.getHealthStatus()
+      const role: UserRole = userCount === 0 ? 'admin' : 'cashier'
+
+      const { error } = await authService.signUp(email, password, username, role)
 
       if (error) {
         return { success: false, error: error.message }
+      }
+
+      if (role === 'admin') {
+        await settingsService.getOrCreateBusinessSettings()
       }
 
       await refreshUsers()
@@ -223,11 +230,25 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Only administrators can create users' }
     }
 
-    const result = await signUp(email, password, username, role)
-    if (result.success) {
-      await refreshUsers()
+    if (username.trim().length < 3) {
+      return { success: false, error: 'Username must be at least 3 characters' }
     }
-    return result
+    if (password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters' }
+    }
+
+    const { available } = await usersService.checkUsernameAvailability(username)
+    if (!available) {
+      return { success: false, error: 'Username already exists' }
+    }
+
+    const { error } = await authService.signUp(email, password, username, role)
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    await refreshUsers()
+    return { success: true }
   }
 
   const deleteUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {

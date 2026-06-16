@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Plus, Minus, Trash2, ShoppingCart, Tag, Pencil, Check, User } from 'lucide-react';
@@ -21,8 +21,8 @@ interface CartItem extends InvoiceItem {
 }
 
 export function Checkout() {
-  const { products, settings, addInvoice, addActivity } = useData();
-  const { user } = useAuth();
+  const { products, settings, addInvoice, addActivity } = useSupabaseData();
+  const { user } = useSupabaseAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState(0);

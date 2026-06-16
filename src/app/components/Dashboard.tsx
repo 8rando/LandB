@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Package, AlertTriangle, DollarSign, TrendingUp, Activity, Calendar } from 'lucide-react';
 import { format, subDays, subMonths, subYears, startOfDay, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, startOfWeek, startOfMonth } from 'date-fns';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export function Dashboard() {
-  const { products, invoices, activities, settings } = useData();
-  const { user } = useAuth();
+  const { products, invoices, activities, settings } = useSupabaseData();
+  const { user } = useSupabaseAuth();
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<'7days' | '30days' | '1year'>('7days');
 

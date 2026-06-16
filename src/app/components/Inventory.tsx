@@ -1,6 +1,6 @@
 import { useState, useMemo, KeyboardEvent } from 'react';
-import { useData } from '../context/DataContext';
-import { useAuth } from '../context/AuthContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Plus, Search, Edit2, Trash2, X, Tag } from 'lucide-react';
@@ -19,8 +19,8 @@ const ITEM_TYPE_COLORS: Record<ItemType, string> = {
 const COMMON_UNITS = ['each', 'hour', 'day', 'lb', 'kg', 'oz', 'liter', 'gallon', 'box', 'pack', 'ream', 'license', 'meter', 'ft'];
 
 export function Inventory() {
-  const { products, addProduct, updateProduct, deleteProduct, addActivity } = useData();
-  const { user } = useAuth();
+  const { products, addProduct, updateProduct, deleteProduct, addActivity } = useSupabaseData();
+  const { user } = useSupabaseAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
   const [filterTag, setFilterTag] = useState<string>('');
@@ -292,8 +292,8 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[
 }
 
 function ItemModal({ product, onClose }: { product?: Product; onClose: () => void }) {
-  const { addProduct, updateProduct, addActivity } = useData();
-  const { user } = useAuth();
+  const { addProduct, updateProduct, addActivity } = useSupabaseData();
+  const { user } = useSupabaseAuth();
 
   const [formData, setFormData] = useState({
     name: product?.name || '',

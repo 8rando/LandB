@@ -65,14 +65,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => window.location.href = '/setup'}
+                  onClick={() => window.location.href = '/'}
                 >
-                  Check Database Setup
+                  Back to Login
                 </Button>
               </div>
 
               <p className="text-xs text-gray-500 text-center">
-                If this problem persists, try checking your internet connection or database configuration.
+                If this problem persists, try checking your internet connection.
               </p>
             </CardContent>
           </Card>

@@ -1,57 +1,56 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Users, Plus, Trash2, KeyRound, X, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Users, Plus, Trash2, ShieldCheck, ShieldOff, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function UserManagement() {
-  const { users, createUser, deleteUser, updateUserPassword, user: currentUser } = useAuth();
+  const { users, createUser, deleteUser, updateUserRole, user: currentUser } = useSupabaseAuth();
 
   const [showCreate, setShowCreate] = useState(false);
-  const [editingPassword, setEditingPassword] = useState<string | null>(null);
 
   const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'cashier' | 'admin'>('cashier');
   const [showNewPw, setShowNewPw] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const [resetPassword, setResetPassword] = useState('');
-  const [showResetPw, setShowResetPw] = useState(false);
-
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = createUser(newUsername, newPassword, newRole);
-    if (result.ok) {
+    setCreating(true);
+    const result = await createUser(newEmail, newPassword, newUsername, newRole);
+    setCreating(false);
+    if (result.success) {
       toast.success(`Account "${newUsername}" created`);
       setNewUsername('');
+      setNewEmail('');
       setNewPassword('');
       setNewRole('cashier');
       setShowCreate(false);
     } else {
-      toast.error(result.error);
+      toast.error(result.error || 'Failed to create account');
     }
   };
 
-  const handleDelete = (username: string) => {
+  const handleDelete = async (userId: string, username: string) => {
     if (!confirm(`Delete account "${username}"? This cannot be undone.`)) return;
-    const result = deleteUser(username);
-    if (result.ok) {
+    const result = await deleteUser(userId);
+    if (result.success) {
       toast.success(`Account "${username}" deleted`);
     } else {
-      toast.error(result.error);
+      toast.error(result.error || 'Failed to delete account');
     }
   };
 
-  const handleResetPassword = (e: React.FormEvent, username: string) => {
-    e.preventDefault();
-    const result = updateUserPassword(username, resetPassword);
-    if (result.ok) {
-      toast.success(`Password updated for "${username}"`);
-      setEditingPassword(null);
-      setResetPassword('');
+  const handleToggleRole = async (userId: string, username: string, currentRole: string) => {
+    const nextRole = currentRole === 'admin' ? 'cashier' : 'admin';
+    const result = await updateUserRole(userId, nextRole);
+    if (result.success) {
+      toast.success(`"${username}" is now ${nextRole === 'admin' ? 'an administrator' : 'a cashier'}`);
     } else {
-      toast.error(result.error);
+      toast.error(result.error || 'Failed to update role');
     }
   };
 
@@ -65,7 +64,7 @@ export function UserManagement() {
           <h1 className="mb-2">User Management</h1>
           <p className="text-gray-600">{users.length} account{users.length !== 1 ? 's' : ''} — admins and cashiers</p>
         </div>
-        <Button onClick={() => { setShowCreate(true); setEditingPassword(null); }}>
+        <Button onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4 mr-2" />
           New Account
         </Button>
@@ -94,7 +93,17 @@ export function UserManagement() {
                   autoFocus
                   required
                 />
-                <p className="text-xs text-gray-400 mt-1">At least 3 characters, lowercase</p>
+                <p className="text-xs text-gray-400 mt-1">At least 3 characters</p>
+              </div>
+              <div>
+                <label className="block text-sm mb-2 text-gray-700">Email</label>
+                <Input
+                  type="email"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm mb-2 text-gray-700">Password</label>
@@ -141,7 +150,7 @@ export function UserManagement() {
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
-                <Button type="submit">Create Account</Button>
+                <Button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create Account'}</Button>
               </div>
             </form>
           </div>
@@ -157,18 +166,11 @@ export function UserManagement() {
         <div className="divide-y divide-gray-100">
           {admins.map(u => (
             <UserRow
-              key={u.username}
+              key={u.id}
               user={u}
-              isCurrent={currentUser?.username === u.username}
-              isEditing={editingPassword === u.username}
-              resetPassword={resetPassword}
-              showResetPw={showResetPw}
-              onStartEdit={() => { setEditingPassword(u.username); setResetPassword(''); setShowCreate(false); }}
-              onCancelEdit={() => setEditingPassword(null)}
-              onResetSubmit={e => handleResetPassword(e, u.username)}
-              onResetChange={v => setResetPassword(v)}
-              onToggleShowPw={() => setShowResetPw(v => !v)}
-              onDelete={() => handleDelete(u.username)}
+              isCurrent={currentUser?.id === u.id}
+              onToggleRole={() => handleToggleRole(u.id, u.username, u.role)}
+              onDelete={() => handleDelete(u.id, u.username)}
             />
           ))}
         </div>
@@ -191,49 +193,28 @@ export function UserManagement() {
           <div className="divide-y divide-gray-100">
             {cashiers.map(u => (
               <UserRow
-                key={u.username}
+                key={u.id}
                 user={u}
-                isCurrent={currentUser?.username === u.username}
-                isEditing={editingPassword === u.username}
-                resetPassword={resetPassword}
-                showResetPw={showResetPw}
-                onStartEdit={() => { setEditingPassword(u.username); setResetPassword(''); setShowCreate(false); }}
-                onCancelEdit={() => setEditingPassword(null)}
-                onResetSubmit={e => handleResetPassword(e, u.username)}
-                onResetChange={v => setResetPassword(v)}
-                onToggleShowPw={() => setShowResetPw(v => !v)}
-                onDelete={() => handleDelete(u.username)}
+                isCurrent={currentUser?.id === u.id}
+                onToggleRole={() => handleToggleRole(u.id, u.username, u.role)}
+                onDelete={() => handleDelete(u.id, u.username)}
               />
             ))}
           </div>
         )}
-      </div>
-
-      <div className="mt-4 text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
-        Accounts are stored locally in this browser. Share credentials securely with your staff.
       </div>
     </div>
   );
 }
 
 interface UserRowProps {
-  user: { username: string; role: string };
+  user: { id: string; username: string; role: string };
   isCurrent: boolean;
-  isEditing: boolean;
-  resetPassword: string;
-  showResetPw: boolean;
-  onStartEdit: () => void;
-  onCancelEdit: () => void;
-  onResetSubmit: (e: React.FormEvent) => void;
-  onResetChange: (v: string) => void;
-  onToggleShowPw: () => void;
+  onToggleRole: () => void;
   onDelete: () => void;
 }
 
-function UserRow({
-  user, isCurrent, isEditing, resetPassword, showResetPw,
-  onStartEdit, onCancelEdit, onResetSubmit, onResetChange, onToggleShowPw, onDelete,
-}: UserRowProps) {
+function UserRow({ user, isCurrent, onToggleRole, onDelete }: UserRowProps) {
   return (
     <div className="px-5 py-4">
       <div className="flex items-center justify-between">
@@ -250,49 +231,25 @@ function UserRow({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!isEditing && (
-            <Button onClick={onStartEdit} variant="ghost" size="sm" className="gap-1.5 text-gray-600">
-              <KeyRound className="w-3.5 h-3.5" />
-              Reset Password
-            </Button>
-          )}
-          {user.username !== 'admin' && (
-            <Button
-              onClick={onDelete}
-              variant="ghost"
-              size="sm"
-              className="p-2 text-red-500 hover:bg-red-50"
-              title="Delete account"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+          {!isCurrent && (
+            <>
+              <Button onClick={onToggleRole} variant="ghost" size="sm" className="gap-1.5 text-gray-600">
+                {user.role === 'admin' ? <ShieldOff className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                {user.role === 'admin' ? 'Demote' : 'Promote'}
+              </Button>
+              <Button
+                onClick={onDelete}
+                variant="ghost"
+                size="sm"
+                className="p-2 text-red-500 hover:bg-red-50"
+                title="Delete account"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
           )}
         </div>
       </div>
-
-      {isEditing && (
-        <form onSubmit={onResetSubmit} className="mt-3 flex items-center gap-2 pl-12">
-          <div className="relative flex-1">
-            <Input
-              type={showResetPw ? 'text' : 'password'}
-              value={resetPassword}
-              onChange={e => onResetChange(e.target.value)}
-              placeholder="New password (min 6 chars)"
-              autoFocus
-              required
-            />
-            <button
-              type="button"
-              onClick={onToggleShowPw}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showResetPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          <Button type="submit" size="sm">Save</Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onCancelEdit}>Cancel</Button>
-        </form>
-      )}
     </div>
   );
 }

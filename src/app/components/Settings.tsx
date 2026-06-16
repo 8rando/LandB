@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useData } from '../context/DataContext';
+import { useSupabaseData } from '../context/SupabaseDataContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Settings as SettingsIcon, Save, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function Settings() {
-  const { settings, updateSettings } = useData();
+  const { settings, updateSettings } = useSupabaseData();
   const [formData, setFormData] = useState(settings);
 
   const handleSubmit = (e: React.FormEvent) => {

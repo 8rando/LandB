@@ -29,7 +29,6 @@ class AuthService {
         })
 
       if (profileError) {
-        await supabase.auth.admin.deleteUser(authData.user.id)
         throw profileError
       }
 
@@ -121,7 +120,10 @@ class AuthService {
 
   async deleteUser(userId: string) {
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId)
+      const { error } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userId)
       if (error) throw error
       return { error: null }
     } catch (error) {

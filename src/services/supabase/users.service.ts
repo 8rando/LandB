@@ -81,19 +81,13 @@ class UsersService {
 
   async checkUsernameAvailability(username: string, excludeUserId?: string) {
     try {
-      let query = supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('username', username.toLowerCase().trim())
-
-      if (excludeUserId) {
-        query = query.neq('id', excludeUserId)
-      }
-
-      const { data, error } = await query
+      const { data, error } = await supabase.rpc('is_username_available', {
+        p_username: username,
+        p_exclude_id: excludeUserId || null,
+      })
 
       if (error) throw error
-      return { available: data.length === 0, error: null }
+      return { available: Boolean(data), error: null }
     } catch (error) {
       return { available: false, error: error as Error }
     }

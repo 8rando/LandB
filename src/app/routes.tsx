@@ -1,8 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { Root } from './components/Root';
 import { Layout } from './components/Layout';
-import { SupabaseLogin } from './components/SupabaseLogin';
-import { DatabaseSetup } from './components/DatabaseSetup';
+import { AuthForm } from './components/AuthForm';
 import { Dashboard } from './components/Dashboard';
 import { Inventory } from './components/Inventory';
 import { Checkout } from './components/Checkout';
@@ -18,11 +17,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <SupabaseLogin />,
-      },
-      {
-        path: '/setup',
-        element: <DatabaseSetup />,
+        element: <AuthForm />,
       },
       {
         element: (

@@ -292,11 +292,15 @@ export function BulkUpload() {
   };
 
   // ── Import (upsert) ──────────────────────────────────────────────────────
-  const handleImport = () => {
+  const handleImport = async () => {
     if (preview.length === 0) { toast.error('No valid items to import'); return; }
-    const result = upsertProducts(preview.map(({ _willUpdate: _, ...p }) => p));
+    const result = await upsertProducts(preview.map(({ _willUpdate: _, ...p }) => p));
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
     setImportResult(result);
-    addActivity({
+    await addActivity({
       type: 'stock_update',
       description: `Bulk import via ${fileName}: ${result.added} added, ${result.updated} updated`,
       user: user?.username,
@@ -318,15 +322,15 @@ export function BulkUpload() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="mb-2">Bulk Import / Export</h1>
         <p className="text-gray-600">Upload an Excel or CSV file to add or update multiple items at once</p>
       </div>
 
       {/* Stepper */}
-      <div className="flex items-center gap-2 mb-8 flex-wrap">
+      <div className="flex items-center gap-2 mb-6 md:mb-8 flex-wrap">
         {(['upload', 'review', 'done'] as Step[]).map((s, idx) => {
           const labels: Record<Step, string> = { upload: 'Upload File', review: 'Review', done: 'Complete' };
           const past = ['upload', 'review', 'done'].indexOf(s) < ['upload', 'review', 'done'].indexOf(step);
@@ -349,10 +353,10 @@ export function BulkUpload() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Drop zone + actions */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               {/* Drop zone */}
               <div
-                className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer mb-6 ${
+                className={`border-2 border-dashed rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer mb-6 ${
                   isDragging
                     ? 'border-yellow-500 bg-yellow-50 scale-[1.01]'
                     : 'border-gray-300 hover:border-yellow-400 hover:bg-gray-50'
@@ -415,7 +419,7 @@ export function BulkUpload() {
           </div>
 
           {/* Column reference */}
-          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Info className="w-4 h-4 text-yellow-500" />
               <h3 className="text-gray-800">Column Reference</h3>
@@ -572,7 +576,7 @@ export function BulkUpload() {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center text-gray-500">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sm:p-12 text-center text-gray-500">
               No valid rows found in file.
             </div>
           )}
@@ -581,7 +585,7 @@ export function BulkUpload() {
 
       {/* ── Step 3: Done ── */}
       {step === 'done' && importResult && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sm:p-12 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8 text-green-600" />
           </div>

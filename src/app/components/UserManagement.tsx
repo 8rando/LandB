@@ -58,8 +58,8 @@ export function UserManagement() {
   const cashiers = users.filter(u => u.role === 'cashier');
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="mb-8 flex items-start justify-between">
+    <div className="p-4 md:p-8 max-w-3xl">
+      <div className="mb-6 md:mb-8 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="mb-2">User Management</h1>
           <p className="text-gray-600">{users.length} account{users.length !== 1 ? 's' : ''} — admins and cashiers</p>
@@ -216,8 +216,8 @@ interface UserRowProps {
 
 function UserRow({ user, isCurrent, onToggleRole, onDelete }: UserRowProps) {
   return (
-    <div className="px-5 py-4">
-      <div className="flex items-center justify-between">
+    <div className="px-4 sm:px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
             <span className="text-sm text-yellow-700 uppercase">{user.username[0]}</span>
@@ -230,7 +230,7 @@ function UserRow({ user, isCurrent, onToggleRole, onDelete }: UserRowProps) {
             <p className="text-xs text-gray-500 capitalize">{user.role}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           {!isCurrent && (
             <>
               <Button onClick={onToggleRole} variant="ghost" size="sm" className="gap-1.5 text-gray-600">

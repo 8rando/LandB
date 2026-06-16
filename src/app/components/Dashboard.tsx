@@ -95,13 +95,13 @@ export function Dashboard() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="mb-2">Dashboard</h1>
         <p className="text-gray-600">Welcome back, {user?.username}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <button
           onClick={() => user?.role === 'admin' && navigate('/inventory')}
           className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-left hover:shadow-md hover:border-blue-300 transition-all cursor-pointer disabled:cursor-default disabled:hover:shadow-sm disabled:hover:border-gray-200"
@@ -177,9 +177,9 @@ export function Dashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-4 md:p-6 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-500" />
               Historical Sales
@@ -194,7 +194,7 @@ export function Dashboard() {
               <option value="1year">Last 12 Months</option>
             </select>
           </div>
-          <div className="p-6">
+          <div className="p-3 md:p-6">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={salesData} key={`bar-chart-${dateRange}`}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" key="grid" />
@@ -222,10 +222,10 @@ export function Dashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-4 md:p-6 border-b border-gray-200">
             <h2>Items by Type</h2>
           </div>
-          <div className="p-6">
+          <div className="p-3 md:p-6">
             {itemTypeData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart key={`pie-chart-${itemTypeData.length}`}>
@@ -264,9 +264,9 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-4 md:p-6 border-b border-gray-200 flex items-center justify-between gap-2">
             <h2 className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-orange-600" />
               Low Stock Alerts
@@ -274,13 +274,13 @@ export function Dashboard() {
             {user?.role === 'admin' && lowStockProducts.length > 0 && (
               <button
                 onClick={() => navigate('/inventory')}
-                className="text-sm text-orange-600 hover:text-orange-700 hover:underline"
+                className="text-sm text-orange-600 hover:text-orange-700 hover:underline whitespace-nowrap"
               >
                 View All →
               </button>
             )}
           </div>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {lowStockProducts.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No low stock items</p>
             ) : (
@@ -315,13 +315,13 @@ export function Dashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-4 md:p-6 border-b border-gray-200">
             <h2 className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-yellow-600" />
               Recent Activity
             </h2>
           </div>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {recentActivities.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No recent activity</p>
             ) : (

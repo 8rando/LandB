@@ -3,7 +3,7 @@ import { useSupabaseData } from '../context/SupabaseDataContext';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Plus, Search, Edit2, Trash2, X, Tag } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Tag, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Product, ItemType } from '../types';
 
 const ITEM_TYPES: ItemType[] = ['Inventory', 'Non-Inventory', 'Service', 'Bundle', 'Other'];
@@ -18,6 +18,8 @@ const ITEM_TYPE_COLORS: Record<ItemType, string> = {
 
 const COMMON_UNITS = ['each', 'hour', 'day', 'lb', 'kg', 'oz', 'liter', 'gallon', 'box', 'pack', 'ream', 'license', 'meter', 'ft'];
 
+type SortKey = 'sku' | 'name' | 'itemType' | 'quantity' | 'price' | 'cost';
+
 export function Inventory() {
   const { products, addProduct, updateProduct, deleteProduct, addActivity } = useSupabaseData();
   const { user } = useSupabaseAuth();
@@ -26,6 +28,7 @@ export function Inventory() {
   const [filterTag, setFilterTag] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -55,8 +58,41 @@ export function Inventory() {
       );
     }
 
+    if (sortConfig) {
+      const { key, direction } = sortConfig;
+      result = [...result].sort((a, b) => {
+        const aVal = a[key];
+        const bVal = b[key];
+        const cmp =
+          typeof aVal === 'number' && typeof bVal === 'number'
+            ? aVal - bVal
+            : String(aVal).localeCompare(String(bVal));
+        return direction === 'asc' ? cmp : -cmp;
+      });
+    }
+
     return result;
-  }, [products, searchTerm, filterType, filterTag]);
+  }, [products, searchTerm, filterType, filterTag, sortConfig]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortConfig?.key !== column) {
+      return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />;
+    }
+    return sortConfig.direction === 'asc' ? (
+      <ArrowUp className="w-3.5 h-3.5 text-gray-700" />
+    ) : (
+      <ArrowDown className="w-3.5 h-3.5 text-gray-700" />
+    );
+  };
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -74,8 +110,8 @@ export function Inventory() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 md:mb-8">
         <div>
           <h1 className="mb-2">Items & Inventory</h1>
           <p className="text-gray-600">{products.length} items tracked</p>
@@ -145,17 +181,41 @@ export function Inventory() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-6 py-3 text-sm text-gray-700">SKU</th>
-                <th className="text-left px-6 py-3 text-sm text-gray-700">Name</th>
-                <th className="text-left px-6 py-3 text-sm text-gray-700">Type</th>
+                <th className="text-left px-6 py-3 text-sm text-gray-700">
+                  <button onClick={() => handleSort('sku')} className="flex items-center gap-1 hover:text-gray-900">
+                    SKU <SortIcon column="sku" />
+                  </button>
+                </th>
+                <th className="text-left px-6 py-3 text-sm text-gray-700">
+                  <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-gray-900">
+                    Name <SortIcon column="name" />
+                  </button>
+                </th>
+                <th className="text-left px-6 py-3 text-sm text-gray-700">
+                  <button onClick={() => handleSort('itemType')} className="flex items-center gap-1 hover:text-gray-900">
+                    Type <SortIcon column="itemType" />
+                  </button>
+                </th>
                 <th className="text-left px-6 py-3 text-sm text-gray-700">Tags</th>
-                <th className="text-right px-6 py-3 text-sm text-gray-700">Qty / Unit</th>
-                <th className="text-right px-6 py-3 text-sm text-gray-700">Price</th>
-                <th className="text-right px-6 py-3 text-sm text-gray-700">Cost</th>
+                <th className="text-right px-6 py-3 text-sm text-gray-700">
+                  <button onClick={() => handleSort('quantity')} className="flex items-center gap-1 justify-end w-full hover:text-gray-900">
+                    Qty / Unit <SortIcon column="quantity" />
+                  </button>
+                </th>
+                <th className="text-right px-6 py-3 text-sm text-gray-700">
+                  <button onClick={() => handleSort('price')} className="flex items-center gap-1 justify-end w-full hover:text-gray-900">
+                    Price <SortIcon column="price" />
+                  </button>
+                </th>
+                <th className="text-right px-6 py-3 text-sm text-gray-700">
+                  <button onClick={() => handleSort('cost')} className="flex items-center gap-1 justify-end w-full hover:text-gray-900">
+                    Cost <SortIcon column="cost" />
+                  </button>
+                </th>
                 <th className="text-right px-6 py-3 text-sm text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -222,6 +282,57 @@ export function Inventory() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile card list ── */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {filteredProducts.map(product => (
+            <div key={product.id} className="p-4 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-gray-900">{product.name}</p>
+                {product.description && (
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">{product.description}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${ITEM_TYPE_COLORS[product.itemType]}`}>
+                    {product.itemType}
+                  </span>
+                  {product.tags?.map(tag => (
+                    <span key={tag} className="px-1.5 py-0.5 bg-yellow-50 text-yellow-700 rounded text-xs">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5 font-mono">{product.sku}</p>
+              </div>
+
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm text-gray-900">${product.price.toFixed(2)}</p>
+                {product.itemType === 'Service' || product.itemType === 'Non-Inventory' ? (
+                  <p className="text-xs text-gray-400 mt-0.5">—</p>
+                ) : (
+                  <p className={`text-xs mt-0.5 ${product.quantity <= product.minStock && product.minStock > 0 ? 'text-orange-600' : 'text-gray-500'}`}>
+                    {product.quantity}/{product.unit}
+                  </p>
+                )}
+                {user?.role === 'admin' && (
+                  <div className="flex items-center justify-end gap-1 mt-2">
+                    <Button onClick={() => handleEdit(product)} variant="ghost" size="sm" className="p-1.5">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      onClick={() => handleDelete(product)}
+                      variant="ghost"
+                      size="sm"
+                      className="p-1.5 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         {filteredProducts.length === 0 && (

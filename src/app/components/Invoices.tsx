@@ -359,8 +359,8 @@ export function Invoices() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="mb-2">Invoices</h1>
         <p className="text-gray-600">{invoices.length} total invoices</p>
       </div>
@@ -378,7 +378,7 @@ export function Invoices() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -455,6 +455,60 @@ export function Invoices() {
           </table>
         </div>
 
+        {/* ── Mobile card list ── */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {filteredInvoices.map(invoice => (
+            <div key={invoice.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-gray-900 truncate">{invoice.id}</p>
+                  <p className="text-sm text-gray-900 mt-0.5">{invoice.customerName || 'Walk-in'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {format(new Date(invoice.date), 'MMM d, yyyy')} • {invoice.items.length} item{invoice.items.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm text-gray-900">${invoice.total.toFixed(2)}</p>
+                  <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs gap-1 ${
+                    invoice.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {invoice.paid ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {invoice.paid ? 'Paid' : 'Unpaid'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 mt-3">
+                <Button
+                  onClick={() => setSelectedInvoice(invoice)}
+                  variant="ghost" size="sm" className="p-2"
+                  title="View invoice"
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={() => printInvoice(invoice, settings)}
+                  variant="ghost" size="sm" className="p-2"
+                  title="Print / Save as PDF"
+                >
+                  <Printer className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={() => togglePaid(invoice)}
+                  variant="ghost" size="sm"
+                  className={`px-3 py-1 text-xs ${
+                    invoice.paid
+                      ? 'text-yellow-600 hover:bg-yellow-50'
+                      : 'text-green-600 hover:bg-green-50'
+                  }`}
+                >
+                  {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {filteredInvoices.length === 0 && (
           <div className="p-12 text-center text-gray-500">
             {searchTerm ? 'No invoices found matching your search' : 'No invoices created yet'}
@@ -491,7 +545,7 @@ function InvoiceModal({
       <div className="bg-white rounded-xl max-w-[700px] w-full max-h-[92vh] overflow-auto shadow-2xl">
 
         {/* Modal toolbar */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2 z-10">
           <div className="flex items-center gap-2 text-gray-700">
             <span className="font-mono text-sm">{invoice.id}</span>
             <span className={`text-xs px-2 py-0.5 rounded ${invoice.paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
@@ -513,16 +567,16 @@ function InvoiceModal({
         </div>
 
         {/* Invoice preview (screen-only, not what gets printed) */}
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {/* Header */}
-          <div className="flex items-start justify-between pb-6 mb-6 border-b-4 border-yellow-500">
+          <div className="flex flex-wrap items-start justify-between gap-4 pb-6 mb-6 border-b-4 border-yellow-500">
             <div>
               <p className="text-2xl text-gray-900">{settings.businessName}</p>
               <p className="text-sm text-gray-600 mt-1">{settings.businessAddress}</p>
               <p className="text-sm text-gray-600">Tel: {settings.businessPhone}</p>
               <p className="text-xs text-gray-500 italic mt-1">Contractors Equipment &amp; Supplies — Renting &amp; Leasing</p>
             </div>
-            <div className="text-right">
+            <div className="text-right ml-auto">
               <div className="inline-block bg-yellow-500 text-white px-5 py-2 rounded-lg mb-3">
                 <span className="text-lg tracking-widest">INVOICE</span>
               </div>
@@ -533,7 +587,7 @@ function InvoiceModal({
           </div>
 
           {/* Bill to / status */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
             <div>
               <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Bill To</p>
               <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 space-y-0.5">
@@ -558,13 +612,14 @@ function InvoiceModal({
           </div>
 
           {/* Items */}
-          <table className="w-full mb-6 text-sm">
+          <div className="overflow-x-auto mb-6">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-900 text-white">
-                <th className="text-left px-4 py-2.5 rounded-tl">Description</th>
-                <th className="text-center px-4 py-2.5">Qty</th>
-                <th className="text-right px-4 py-2.5">Unit Price</th>
-                <th className="text-right px-4 py-2.5 rounded-tr">Amount</th>
+                <th className="text-left px-4 py-2.5 rounded-tl whitespace-nowrap">Description</th>
+                <th className="text-center px-4 py-2.5 whitespace-nowrap">Qty</th>
+                <th className="text-right px-4 py-2.5 whitespace-nowrap">Unit Price</th>
+                <th className="text-right px-4 py-2.5 rounded-tr whitespace-nowrap">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -578,10 +633,11 @@ function InvoiceModal({
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Totals */}
           <div className="flex justify-end mb-8">
-            <div className="w-64 space-y-2 text-sm">
+            <div className="w-full sm:w-64 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600 py-1">
                 <span>Subtotal</span><span className="text-gray-900">${invoice.subtotal.toFixed(2)}</span>
               </div>

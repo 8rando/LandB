@@ -18,7 +18,7 @@ export function AuthForm() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp, user, isLocked, lockoutTime } = useSupabaseAuth()
+  const { signIn, signUp, user, isLocked, lockoutTime, sessionConflict, clearSessionConflict } = useSupabaseAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -75,6 +75,10 @@ export function AuthForm() {
     resetFields()
   }
 
+  useEffect(() => {
+    return () => clearSessionConflict()
+  }, [])
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
       <div className="w-full max-w-md space-y-6">
@@ -113,6 +117,15 @@ export function AuthForm() {
                 Register
               </button>
             </div>
+
+            {sessionConflict && mode === 'login' && (
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  You were signed out because this account was logged into on another device.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'register' && (

@@ -22,8 +22,8 @@ export function Settings() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="mb-2">Settings</h1>
         <p className="text-gray-600">Manage business configuration and appearance</p>
       </div>
@@ -32,16 +32,16 @@ export function Settings() {
 
         {/* ── Appearance ── */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-4 md:p-6 border-b border-gray-200">
             <h2 className="flex items-center gap-2">
               <PanelLeft className="w-5 h-5" />
               Appearance
             </h2>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <p className="text-sm text-gray-700 mb-4">Sidebar Style</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
               {/* Always Expanded */}
               <button
@@ -119,14 +119,14 @@ export function Settings() {
 
         {/* ── Business Information ── */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-4 md:p-6 border-b border-gray-200">
             <h2 className="flex items-center gap-2">
               <SettingsIcon className="w-5 h-5" />
               Business Information
             </h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-6">
             <div>
               <label className="block text-sm mb-2 text-gray-700">Business Name</label>
               <Input
@@ -145,7 +145,7 @@ export function Settings() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm mb-2 text-gray-700">Phone</label>
                 <Input
@@ -167,7 +167,7 @@ export function Settings() {
 
             <div className="pt-6 border-t border-gray-200">
               <h3 className="mb-4">System Configuration</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-2 text-gray-700">VAT Rate (%)</label>
                   <Input
@@ -203,7 +203,7 @@ export function Settings() {
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-xs text-yellow-800">
-            All data is stored locally in your browser. Clearing browser data will reset all settings, products, and invoices.
+            
           </p>
         </div>
       </div>

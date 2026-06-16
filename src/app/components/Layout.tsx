@@ -11,6 +11,8 @@ import {
   Settings,
   LogOut,
   Users,
+  Menu,
+  X,
 } from 'lucide-react';
 import lbLogo from '../../imports/lb-logo.png';
 
@@ -29,6 +31,7 @@ export function Layout() {
   const { settings } = useSupabaseData();
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const isHoverMode = settings.sidebarMode === 'hover';
   const expanded = !isHoverMode || hovered;
@@ -41,8 +44,94 @@ export function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* ── Sidebar ── */}
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* ── Mobile top bar ── */}
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between bg-white border-b border-gray-200 px-3 h-14 shadow-sm">
+        <button
+          onClick={() => setMobileNavOpen(true)}
+          className="p-2 -ml-1 text-gray-600 hover:bg-gray-100 rounded-lg"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <img src={lbLogo} alt="L & B Limited" className="w-7 h-7 object-contain" />
+          <p className="text-sm text-gray-900">L &amp; B Limited</p>
+        </div>
+        <div className="w-8 h-8 flex-shrink-0 rounded-full bg-yellow-100 flex items-center justify-center">
+          <span className="text-xs text-yellow-700 uppercase">{user?.username?.[0]}</span>
+        </div>
+      </header>
+
+      {/* ── Mobile nav drawer ── */}
+      {mobileNavOpen && (
+        <div className="md:hidden fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-72 max-w-[85%] bg-white shadow-2xl flex flex-col">
+            <div className="h-14 flex items-center justify-between border-b border-gray-200 px-4 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <img src={lbLogo} alt="L & B Limited" className="w-8 h-8 object-contain" />
+                <p className="text-gray-900">L &amp; B Limited</p>
+              </div>
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+              {filteredNav.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMobileNavOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-lg py-3 px-3 transition-colors duration-150 ${
+                      isActive
+                        ? 'bg-yellow-50 text-yellow-700'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon className={`flex-shrink-0 w-5 h-5 ${isActive ? 'text-yellow-600' : ''}`} />
+                      <span className="text-sm">{label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+
+            <div className="border-t border-gray-200 p-3 flex-shrink-0">
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-yellow-100 flex items-center justify-center">
+                  <span className="text-xs text-yellow-700 uppercase">{user?.username?.[0]}</span>
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-sm text-gray-900 truncate leading-tight">{user?.username}</p>
+                  <p className="text-xs text-gray-500 capitalize leading-tight">{user?.role}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full gap-2.5 rounded-lg py-2.5 px-3 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Desktop sidebar ── */}
       <aside
         onMouseEnter={() => isHoverMode && setHovered(true)}
         onMouseLeave={() => isHoverMode && setHovered(false)}
@@ -50,7 +139,7 @@ export function Layout() {
           width: expanded ? '16rem' : '4.5rem',
           transition: 'width 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}
-        className="relative z-20 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col shadow-sm"
+        className="hidden md:flex md:flex-col relative z-20 flex-shrink-0 bg-white border-r border-gray-200 shadow-sm"
       >
         {/* ── Logo ── */}
         <div className="h-[72px] flex items-center border-b border-gray-200 px-3 overflow-hidden">

@@ -70,6 +70,7 @@ export type Database = {
           id: string
           username: string
           role: 'admin' | 'cashier'
+          active_session_id: string | null
           created_at: string
           updated_at: string
         }
@@ -77,6 +78,7 @@ export type Database = {
           id: string
           username: string
           role?: 'admin' | 'cashier'
+          active_session_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -84,6 +86,7 @@ export type Database = {
           id?: string
           username?: string
           role?: 'admin' | 'cashier'
+          active_session_id?: string | null
           created_at?: string
           updated_at?: string
         }

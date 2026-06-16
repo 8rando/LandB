@@ -53,6 +53,43 @@ class AuthService {
     }
   }
 
+  // Stamps a new session id on the user's profile, superseding any session
+  // already active on another device. Called once right after sign-in.
+  async claimActiveSession(userId: string, sessionId: string) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ active_session_id: sessionId })
+      .eq('id', userId)
+    return { error }
+  }
+
+  async getActiveSessionId(userId: string) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('active_session_id')
+      .eq('id', userId)
+      .single()
+    if (error) return { activeSessionId: null, error }
+    return { activeSessionId: data.active_session_id, error: null }
+  }
+
+  // Notifies the caller when another device claims the session (i.e. logs
+  // in to the same account), so the current tab can be signed out.
+  subscribeToSessionChanges(userId: string, onChange: (activeSessionId: string | null) => void) {
+    const channel = supabase
+      .channel(`user_profile_session_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'user_profiles', filter: `id=eq.${userId}` },
+        (payload: any) => onChange(payload.new?.active_session_id ?? null)
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
   async signOut() {
     const { error } = await supabase.auth.signOut()
     return { error }

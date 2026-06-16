@@ -249,3 +249,21 @@ begin
             foreign key (user_id) references user_profiles(id) on delete set null;
     end if;
 end $$;
+
+-- Single-session-per-account enforcement: each sign-in stamps a fresh
+-- random id here, superseding whatever device was previously logged in.
+-- Other devices watch this column via Realtime and sign themselves out
+-- when it changes to a value they didn't write.
+alter table user_profiles add column if not exists active_session_id uuid;
+
+-- Realtime must be told to publish changes on this table, or other devices
+-- never receive the UPDATE event that tells them to sign out.
+do $$
+begin
+    if not exists (
+        select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime' and tablename = 'user_profiles'
+    ) then
+        alter publication supabase_realtime add table user_profiles;
+    end if;
+end $$;

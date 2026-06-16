@@ -20,12 +20,16 @@ interface SupabaseAuthContextType {
   // Account lockout (maintain compatibility with existing UI)
   isLocked: boolean
   lockoutTime: number
+  // Set when this device's session was superseded by a login elsewhere
+  sessionConflict: boolean
+  clearSessionConflict: () => void
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined)
 
 const MAX_ATTEMPTS = 3
 const LOCKOUT_DURATION = 60000
+const SESSION_ID_KEY = 'lanims_active_session_id'
 
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -35,6 +39,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [failedAttempts, setFailedAttempts] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
   const [lockoutTime, setLockoutTime] = useState(0)
+  const [sessionConflict, setSessionConflict] = useState(false)
 
   useEffect(() => {
     const loadSession = async () => {
@@ -86,6 +91,41 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Enforce a single active session per account: detect when another
+  // device logs in (claiming a new session id) and sign this device out.
+  useEffect(() => {
+    if (!user) return
+
+    let cancelled = false
+    let unsubscribe: (() => void) | undefined
+
+    const checkAndSubscribe = async () => {
+      const localSessionId = localStorage.getItem(SESSION_ID_KEY)
+      const { activeSessionId } = await authService.getActiveSessionId(user.id)
+
+      if (cancelled) return
+
+      if (localSessionId && activeSessionId && activeSessionId !== localSessionId) {
+        await forceSignOut()
+        return
+      }
+
+      unsubscribe = authService.subscribeToSessionChanges(user.id, (activeSessionId) => {
+        const currentLocalId = localStorage.getItem(SESSION_ID_KEY)
+        if (currentLocalId && activeSessionId !== currentLocalId) {
+          forceSignOut()
+        }
+      })
+    }
+
+    checkAndSubscribe()
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [user?.id])
+
   useEffect(() => {
     if (user?.role === 'admin') {
       refreshUsers()
@@ -118,7 +158,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await authService.signIn(email, password)
+      const { user: signedInUser, error } = await authService.signIn(email, password)
 
       if (error) {
         const next = failedAttempts + 1
@@ -136,6 +176,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
 
       setFailedAttempts(0)
+      setSessionConflict(false)
+
+      // Claim this device as the sole active session, signing out
+      // whichever device was previously logged into this account.
+      if (signedInUser) {
+        const sessionId = crypto.randomUUID()
+        localStorage.setItem(SESSION_ID_KEY, sessionId)
+        await authService.claimActiveSession(signedInUser.id, sessionId)
+      }
+
       return { success: true }
     } catch (error) {
       return { success: false, error: 'An unexpected error occurred' }
@@ -164,7 +214,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       const { userCount } = await databaseService.getHealthStatus()
       const role: UserRole = userCount === 0 ? 'admin' : 'cashier'
 
-      const { error } = await authService.signUp(email, password, username, role)
+      const { user: signedUpUser, error } = await authService.signUp(email, password, username, role)
 
       if (error) {
         return { success: false, error: error.message }
@@ -172,6 +222,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       if (role === 'admin') {
         await settingsService.getOrCreateBusinessSettings()
+      }
+
+      if (signedUpUser) {
+        const sessionId = crypto.randomUUID()
+        localStorage.setItem(SESSION_ID_KEY, sessionId)
+        await authService.claimActiveSession(signedUpUser.id, sessionId)
       }
 
       await refreshUsers()
@@ -183,10 +239,24 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await authService.signOut()
+    localStorage.removeItem(SESSION_ID_KEY)
     setUser(null)
     setSession(null)
     setUsers([])
   }
+
+  // Same as signOut, but flags the conflict so the login screen can explain
+  // why the user landed back there.
+  const forceSignOut = async () => {
+    await authService.signOut()
+    localStorage.removeItem(SESSION_ID_KEY)
+    setUser(null)
+    setSession(null)
+    setUsers([])
+    setSessionConflict(true)
+  }
+
+  const clearSessionConflict = () => setSessionConflict(false)
 
   const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -330,6 +400,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     refreshUsers,
     isLocked,
     lockoutTime,
+    sessionConflict,
+    clearSessionConflict,
   }
 
   return (

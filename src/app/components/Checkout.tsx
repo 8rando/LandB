@@ -198,15 +198,15 @@ export function Checkout() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="mb-2">Checkout / POS</h1>
         <p className="text-gray-600">Create new sale invoice</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* ── Left: product browser ── */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-4 border-b border-gray-200 space-y-3">
               {/* Type filter */}
@@ -316,9 +316,9 @@ export function Checkout() {
             ) : (
               <div className="divide-y divide-gray-200">
                 {cart.map(item => (
-                  <div key={item.productId} className="p-4 flex items-center gap-3">
+                  <div key={item.productId} className="p-4 flex flex-wrap items-center gap-3">
                     {/* Name */}
-                    <div className="flex-1 min-w-0">
+                    <div className="w-full sm:w-auto sm:flex-1 min-w-0">
                       <p className="text-gray-900 truncate">{item.productName}</p>
                       {/* Price editor */}
                       <div className="flex items-center gap-1.5 mt-0.5">
@@ -374,35 +374,36 @@ export function Checkout() {
                       </div>
                     </div>
 
-                    {/* Qty controls */}
-                    <div className="flex items-center gap-1">
+                    {/* Qty / total / remove */}
+                    <div className="flex items-center gap-3 ml-auto">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          variant="ghost" size="sm" className="p-1.5"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </Button>
+                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <Button
+                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          variant="ghost" size="sm" className="p-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+
+                      <div className="w-16 sm:w-20 text-right">
+                        <p className="text-gray-900">${item.total.toFixed(2)}</p>
+                      </div>
+
                       <Button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                        variant="ghost" size="sm" className="p-1.5"
+                        onClick={() => removeFromCart(item.productId)}
+                        variant="ghost" size="sm"
+                        className="p-1.5 text-red-500 hover:bg-red-50"
                       >
-                        <Minus className="w-3.5 h-3.5" />
-                      </Button>
-                      <span className="w-8 text-center text-sm">{item.quantity}</span>
-                      <Button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        variant="ghost" size="sm" className="p-1.5"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-
-                    {/* Line total */}
-                    <div className="w-20 text-right">
-                      <p className="text-gray-900">${item.total.toFixed(2)}</p>
-                    </div>
-
-                    <Button
-                      onClick={() => removeFromCart(item.productId)}
-                      variant="ghost" size="sm"
-                      className="p-1.5 text-red-500 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 ))}
               </div>
@@ -412,14 +413,14 @@ export function Checkout() {
 
         {/* ── Right: summary ── */}
         <div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-8">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 lg:sticky lg:top-8">
+            <div className="p-4 md:p-6 border-b border-gray-200">
               <h2 className="flex items-center gap-2">
                 <User className="w-4 h-4 text-gray-500" />
                 Customer
               </h2>
             </div>
-            <div className="p-6 space-y-3 border-b border-gray-200">
+            <div className="p-4 md:p-6 space-y-3 border-b border-gray-200">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Customer Name *</label>
                 <Input
@@ -464,7 +465,7 @@ export function Checkout() {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 md:p-6 space-y-4">
               <div className="flex justify-between text-gray-700">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>

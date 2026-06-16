@@ -29,7 +29,7 @@ interface SupabaseDataContextType {
   bulkImportProducts: (products: Omit<Product, 'id' | 'lastUpdated'>[]) => Promise<{ success: boolean; error?: string; added: number }>
   upsertProducts: (products: Omit<Product, 'id' | 'lastUpdated'>[]) => Promise<{ added: number; updated: number; error?: string }>
   // Invoice operations
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => Promise<{ success: boolean; error?: string; invoiceId?: string }>
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'date' | 'invoiceNumber'>) => Promise<{ success: boolean; error?: string; invoiceId?: string }>
   updateInvoice: (id: string, updates: Partial<Invoice>) => Promise<{ success: boolean; error?: string }>
   // Settings operations
   updateSettings: (settings: Partial<Settings>) => Promise<{ success: boolean; error?: string }>
@@ -63,12 +63,13 @@ const transformSupabaseProduct = (supabaseProduct: SupabaseProduct): Product => 
 const transformSupabaseInvoice = (supabaseInvoice: InvoiceWithItems): Invoice => ({
   id: supabaseInvoice.id,
   invoiceNumber: supabaseInvoice.invoice_number,
+  createdBy: supabaseInvoice.created_by_profile?.username || 'Unknown',
   customerName: supabaseInvoice.customer_name,
   customerAddress: supabaseInvoice.customer_address || '',
   customerPhone: supabaseInvoice.customer_phone || '',
   items: supabaseInvoice.invoice_items.map(item => ({
-    id: item.product_id,
-    name: item.product_name,
+    productId: item.product_id,
+    productName: item.product_name,
     quantity: item.quantity,
     price: Number(item.price),
     total: Number(item.total),
@@ -290,12 +291,13 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addInvoice = async (invoice: Omit<Invoice, 'id' | 'date'>): Promise<{ success: boolean; error?: string; invoiceId?: string }> => {
+  const addInvoice = async (invoice: Omit<Invoice, 'id' | 'date' | 'invoiceNumber'>): Promise<{ success: boolean; error?: string; invoiceId?: string }> => {
     try {
       const currentUser = await authService.getCurrentUser()
+      const invoiceNumber = await invoicesService.generateInvoiceNumber()
 
       const supabaseInvoice = {
-        invoice_number: invoice.invoiceNumber,
+        invoice_number: invoiceNumber,
         customer_name: invoice.customerName,
         customer_address: invoice.customerAddress || null,
         customer_phone: invoice.customerPhone || null,
@@ -310,8 +312,8 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
       }
 
       const supabaseItems = invoice.items.map(item => ({
-        product_id: item.id,
-        product_name: item.name,
+        product_id: item.productId,
+        product_name: item.productName,
         quantity: item.quantity,
         price: item.price,
         total: item.total,

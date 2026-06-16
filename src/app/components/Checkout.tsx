@@ -157,11 +157,11 @@ export function Checkout() {
   const vatAmount = (afterDiscount * settings.vatRate) / 100;
   const total = afterDiscount + vatAmount;
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) { toast.error('Cart is empty'); return; }
     if (!customerName.trim()) { toast.error('Please enter a customer name'); return; }
 
-    addInvoice({
+    const result = await addInvoice({
       items: cart.map(({ defaultPrice: _d, priceOverridden: _p, ...item }) => item),
       subtotal,
       discount,
@@ -176,7 +176,12 @@ export function Checkout() {
       paymentType,
     });
 
-    addActivity({
+    if (!result.success) {
+      toast.error(result.error || 'Failed to create invoice');
+      return;
+    }
+
+    await addActivity({
       type: 'sale',
       description: `Created invoice for $${total.toFixed(2)} — ${customerName.trim()} (${paymentType})`,
       user: user?.username,

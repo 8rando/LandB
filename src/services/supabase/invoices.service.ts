@@ -8,6 +8,7 @@ type InvoiceItemInsert = Database['public']['Tables']['invoice_items']['Insert']
 
 export interface InvoiceWithItems extends Invoice {
   invoice_items: InvoiceItem[]
+  created_by_profile: { username: string } | null
 }
 
 class InvoicesService {
@@ -17,7 +18,8 @@ class InvoicesService {
         .from('invoices')
         .select(`
           *,
-          invoice_items (*)
+          invoice_items (*),
+          created_by_profile:user_profiles (username)
         `)
         .order('created_at', { ascending: false })
 

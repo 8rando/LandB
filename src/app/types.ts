@@ -22,6 +22,7 @@ export type TireProduct = Product;
 
 export interface Invoice {
   id: string;
+  invoiceNumber: string;
   date: string;
   items: InvoiceItem[];
   subtotal: number;

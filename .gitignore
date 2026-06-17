@@ -34,6 +34,7 @@ pnpm-debug.log*
 
 # Local test helpers
 mobile_check.cjs
+*.postman_collection.json
 
 # Project-specific (pre-existing)
 .agents

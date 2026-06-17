@@ -39,3 +39,8 @@ mobile_check.cjs
 .agents
 supabase-schema.sql
 skills-lock.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example

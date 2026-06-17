@@ -1,11 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+// These fall back to the project's public values when build-time env vars
+// are absent (e.g. a Cloudflare build without VITE_* set). The publishable
+// (anon) key is designed to ship in the client bundle and is protected by
+// RLS, so hardcoding it as a fallback is safe — it prevents the whole app
+// from blanking out on a missing env var. Env vars still override these.
+const FALLBACK_SUPABASE_URL = 'https://xjighysfyshcrqrwvgbg.supabase.co'
+const FALLBACK_SUPABASE_KEY = 'sb_publishable_wAS-SmHmdsM_yXPGHQhGGA_cmgfi_Fg'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

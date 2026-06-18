@@ -39,4 +39,5 @@ mobile_check.cjs
 # Project-specific (pre-existing)
 .agents
 supabase-schema.sql
+supabase-additional-functions.sql
 skills-lock.json

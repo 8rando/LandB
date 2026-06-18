@@ -90,6 +90,7 @@ const transformSupabaseSettings = (supabaseSettings: SupabaseSettings): Settings
   businessAddress: supabaseSettings.business_address,
   businessPhone: supabaseSettings.business_phone,
   businessEmail: supabaseSettings.business_email,
+  businessTagline: supabaseSettings.business_tagline ?? 'Contractors Equipment & Supplies — Renting & Leasing',
   vatRate: Number(supabaseSettings.vat_rate),
   lowStockThreshold: supabaseSettings.low_stock_threshold,
   sidebarMode: supabaseSettings.sidebar_mode,
@@ -125,6 +126,7 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
     businessAddress: 'Cunningham Industrial Site Cayon',
     businessPhone: '869-465-9808',
     businessEmail: 'info@lb-limited.com',
+    businessTagline: 'Contractors Equipment & Supplies — Renting & Leasing',
     vatRate: 17,
     lowStockThreshold: 10,
     sidebarMode: 'expanded',
@@ -415,6 +417,7 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
       if (updates.businessAddress !== undefined) supabaseUpdates.business_address = updates.businessAddress
       if (updates.businessPhone !== undefined) supabaseUpdates.business_phone = updates.businessPhone
       if (updates.businessEmail !== undefined) supabaseUpdates.business_email = updates.businessEmail
+      if (updates.businessTagline !== undefined) supabaseUpdates.business_tagline = updates.businessTagline
       if (updates.vatRate !== undefined) supabaseUpdates.vat_rate = updates.vatRate
       if (updates.lowStockThreshold !== undefined) supabaseUpdates.low_stock_threshold = updates.lowStockThreshold
       if (updates.sidebarMode) supabaseUpdates.sidebar_mode = updates.sidebarMode

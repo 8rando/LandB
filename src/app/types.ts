@@ -57,6 +57,7 @@ export interface Settings {
   businessAddress: string;
   businessPhone: string;
   businessEmail: string;
+  businessTagline: string;
   vatRate: number;
   lowStockThreshold: number;
   sidebarMode: 'expanded' | 'hover';

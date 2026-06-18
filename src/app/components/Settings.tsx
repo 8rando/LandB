@@ -165,6 +165,16 @@ export function Settings() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm mb-2 text-gray-700">Tagline</label>
+              <Input
+                value={formData.businessTagline}
+                onChange={e => setFormData({ ...formData, businessTagline: e.target.value })}
+                placeholder="e.g. Contractors Equipment & Supplies — Renting & Leasing"
+              />
+              <p className="text-xs text-gray-500 mt-1">Short business description shown beneath your company details on generated invoices</p>
+            </div>
+
             <div className="pt-6 border-t border-gray-200">
               <h3 className="mb-4">System Configuration</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -201,11 +211,7 @@ export function Settings() {
           </form>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-xs text-yellow-800">
-            
-          </p>
-        </div>
+      
       </div>
     </div>
   );

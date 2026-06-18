@@ -187,6 +187,7 @@ export type Database = {
           business_address: string
           business_phone: string
           business_email: string
+          business_tagline: string
           vat_rate: number
           low_stock_threshold: number
           sidebar_mode: 'expanded' | 'hover'
@@ -199,6 +200,7 @@ export type Database = {
           business_address?: string
           business_phone?: string
           business_email?: string
+          business_tagline?: string
           vat_rate?: number
           low_stock_threshold?: number
           sidebar_mode?: 'expanded' | 'hover'
@@ -211,6 +213,7 @@ export type Database = {
           business_address?: string
           business_phone?: string
           business_email?: string
+          business_tagline?: string
           vat_rate?: number
           low_stock_threshold?: number
           sidebar_mode?: 'expanded' | 'hover'

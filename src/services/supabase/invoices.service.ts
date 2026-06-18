@@ -162,23 +162,36 @@ class InvoicesService {
     }
   }
 
+  // Produces a human-readable, date-based number: "dd.mm.yyyy-N" where N is the
+  // running count of invoices for that day (1, 2, 3 …). The day's sequence is
+  // derived from existing numbers sharing the same date prefix, so it stays
+  // consistent with the date shown on the invoice regardless of timezone.
   async generateInvoiceNumber(): Promise<string> {
+    const now = new Date()
+    const dd = String(now.getDate()).padStart(2, '0')
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const yyyy = now.getFullYear()
+    const datePart = `${dd}.${mm}.${yyyy}`
+
     try {
       const { data, error } = await supabase
         .from('invoices')
         .select('invoice_number')
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .like('invoice_number', `${datePart}-%`)
 
       if (error) throw error
 
-      const lastInvoiceNumber = data?.[0]?.invoice_number || 'INV-000000'
-      const lastNumber = parseInt(lastInvoiceNumber.split('-')[1] || '0')
-      const nextNumber = lastNumber + 1
+      let maxSeq = 0
+      for (const row of data || []) {
+        const seq = parseInt((row.invoice_number || '').split('-')[1] || '0', 10)
+        if (!Number.isNaN(seq) && seq > maxSeq) maxSeq = seq
+      }
 
-      return `INV-${nextNumber.toString().padStart(6, '0')}`
+      return `${datePart}-${maxSeq + 1}`
     } catch (error) {
-      return `INV-${Date.now().toString().slice(-6)}`
+      // Fallback keeps the date-based shape but appends a time-based suffix to
+      // stay unique if the lookup fails.
+      return `${datePart}-${Date.now().toString().slice(-4)}`
     }
   }
 

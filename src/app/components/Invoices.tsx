@@ -24,52 +24,49 @@ async function toDataUrl(src: string): Promise<string> {
   }
 }
 
-// ── Print helper ─────────────────────────────────────────────────────────────
+// ── Print helper (ink-friendly: white background, thin black lines only) ───────
 async function printInvoice(invoice: Invoice, settings: Settings) {
   const discountAmount = (invoice.subtotal * invoice.discount) / 100;
-  const afterDiscount = invoice.subtotal - discountAmount;
   const logoDataUrl = await toDataUrl(lbLogo);
+
+  // Payment terms: 30 days from the invoice date.
+  const dueDate = new Date(invoice.date);
+  dueDate.setDate(dueDate.getDate() + 30);
+
+  const amountPaid = invoice.paid ? invoice.total : 0;
+  const balanceDue = invoice.paid ? 0 : invoice.total;
 
   const itemRows = invoice.items
     .map(
       (item, i) => `
-      <tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'}">
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827">${item.productName}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:center">${item.quantity}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:right">$${item.price.toFixed(2)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;text-align:right">$${item.total.toFixed(2)}</td>
+      <tr>
+        <td class="c">${i + 1}</td>
+        <td>${item.productName}</td>
+        <td class="c">${item.quantity}</td>
+        <td class="r">$${item.price.toFixed(2)}</td>
+        <td class="r">$${item.total.toFixed(2)}</td>
       </tr>`
     )
     .join('');
-
-  const discountRow =
-    invoice.discount > 0
-      ? `<tr>
-          <td colspan="2"></td>
-          <td style="padding:6px 0;font-size:13px;color:#059669;text-align:right;padding-right:16px">Discount (${invoice.discount}%)</td>
-          <td style="padding:6px 0;font-size:13px;color:#059669;text-align:right">-$${discountAmount.toFixed(2)}</td>
-        </tr>`
-      : '';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Invoice ${invoice.id} — ${settings.businessName}</title>
+  <title>Invoice ${invoice.invoiceNumber || invoice.id} — ${settings.businessName}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 13px;
-      color: #374151;
+      font-family: Arial, 'Helvetica Neue', sans-serif;
+      font-size: 12px;
+      color: #000;
       background: #fff;
-      padding: 0;
     }
     .page {
       width: 210mm;
       min-height: 297mm;
       margin: 0 auto;
-      padding: 18mm 18mm 14mm 18mm;
+      padding: 16mm 16mm 14mm 16mm;
       display: flex;
       flex-direction: column;
     }
@@ -78,133 +75,71 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 4px solid #eab308;
-      padding-bottom: 20px;
-      margin-bottom: 24px;
-    }
-    .company-name {
-      font-size: 26px;
-      font-weight: 700;
-      color: #111827;
       margin-bottom: 6px;
     }
-    .company-sub {
-      font-size: 11px;
-      color: #6b7280;
-      font-style: italic;
-      margin-top: 4px;
-    }
-    .company-detail { font-size: 12px; color: #4b5563; margin-top: 2px; }
-    .invoice-badge {
-      background: #eab308;
-      color: white;
-      padding: 8px 20px;
-      border-radius: 8px;
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      margin-bottom: 10px;
-      display: inline-block;
-    }
-    .invoice-meta { font-size: 12px; color: #6b7280; text-align: right; margin-top: 4px; }
-    .invoice-meta span { color: #111827; }
-    /* ── Bill to / Status ── */
-    .meta-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .brand { display: flex; align-items: flex-start; gap: 12px; }
+    .brand img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
+    .company-name { font-size: 18px; font-weight: 700; }
+    .company-detail { font-size: 11px; color: #222; margin-top: 2px; }
+    .company-sub { font-size: 10px; color: #444; font-style: italic; margin-top: 3px; }
+    .inv-title { font-size: 24px; font-weight: 700; letter-spacing: 1px; text-align: right; margin-bottom: 8px; }
+    .meta-table { border-collapse: collapse; margin-left: auto; }
+    .meta-table td { border: 1px solid #000; padding: 4px 10px; font-size: 11px; }
+    .meta-table td.label { font-weight: 700; }
+    .meta-table td.value { text-align: right; min-width: 96px; }
+    .rule { border: 0; border-top: 1px solid #000; margin: 12px 0 14px; }
+    /* ── Parties ── */
+    .parties {
+      display: flex;
+      justify-content: space-between;
       gap: 24px;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
     .section-label {
       font-size: 10px;
-      font-weight: 600;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: #6b7280;
-      margin-bottom: 8px;
-    }
-    .meta-box {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 12px 16px;
-    }
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      border: 2px solid;
-    }
-    .status-paid   { background:#d1fae5; color:#065f46; border-color:#059669; }
-    .status-unpaid { background:#fef9c3; color:#713f12; border-color:#ca8a04; }
-    /* ── Items table ── */
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    .items-table thead tr {
-      background: #111827;
-      color: #fff;
-    }
-    .items-table thead th {
-      padding: 10px 14px;
-      font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: .06em;
       text-transform: uppercase;
+      margin-bottom: 4px;
     }
-    .items-table thead th:first-child { text-align: left; }
-    .items-table thead th:not(:first-child) { text-align: right; }
-    .items-table thead th:nth-child(2) { text-align: center; }
+    .party-name { font-size: 12px; font-weight: 700; }
+    .party-detail { font-size: 11px; color: #222; margin-top: 1px; }
+    .party-right { text-align: right; }
+    /* ── Items table ── */
+    .items { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .items th, .items td { border: 1px solid #000; padding: 6px 8px; font-size: 11px; vertical-align: top; }
+    .items th { font-weight: 700; text-align: left; }
+    .items th.c, .items td.c { text-align: center; }
+    .items th.r, .items td.r { text-align: right; }
+    .items th.num, .items td.c:first-child { width: 32px; }
     /* ── Totals ── */
-    .totals-wrap { display: flex; justify-content: flex-end; margin-bottom: 32px; }
-    .totals-box { width: 280px; }
-    .totals-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 7px 0;
-      font-size: 13px;
-      color: #374151;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    .totals-row.grand {
-      background: #fefce8;
-      border: 2px solid #eab308;
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin-top: 4px;
-      font-size: 16px;
-      font-weight: 700;
-      color: #854d0e;
-      border-bottom: 2px solid #eab308;
-    }
+    .totals-wrap { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+    .totals { border-collapse: collapse; }
+    .totals td { border: 1px solid #000; padding: 5px 12px; font-size: 11px; }
+    .totals td.label { font-weight: 600; }
+    .totals td.value { text-align: right; min-width: 96px; }
+    .totals tr.grand td { font-weight: 700; font-size: 13px; }
     /* ── Footer ── */
     .footer {
       margin-top: auto;
-      border-top: 2px solid #e5e7eb;
-      padding-top: 16px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid #000;
+      padding-top: 10px;
+      display: flex;
+      justify-content: space-between;
       gap: 16px;
-    }
-    .footer-label { font-size: 12px; font-weight: 600; color: #111827; margin-bottom: 4px; }
-    .footer-text  { font-size: 11px; color: #6b7280; line-height: 1.6; }
-    .footer-right { text-align: right; }
-    .print-stamp {
-      text-align: center;
-      margin-top: 16px;
       font-size: 10px;
-      color: #9ca3af;
+      color: #222;
+      line-height: 1.6;
     }
+    .footer-right { text-align: right; }
+    .page-num { text-align: center; font-size: 10px; color: #555; margin-top: 10px; }
     @page { size: A4; margin: 0; }
     @media print {
-      html, body { width: 210mm; height: 297mm; }
-      .page { padding: 14mm 16mm 12mm 16mm; }
+      html, body { width: 210mm; }
+      /* Don't force full-sheet height in print: an element exactly 297mm tall
+         overflows by a sub-pixel and spills onto a blank second page. Let the
+         page be as tall as its content instead. */
+      .page { min-height: 0; padding: 14mm 16mm 12mm 16mm; }
     }
   </style>
 </head>
@@ -213,55 +148,54 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 
   <!-- Header -->
   <div class="header">
-    <div style="display:flex;align-items:flex-start;gap:14px">
-      ${logoDataUrl ? `<img src="${logoDataUrl}" alt="L &amp; B Logo" style="width:72px;height:72px;object-fit:contain;flex-shrink:0">` : ''}
+    <div class="brand">
+      ${logoDataUrl ? `<img src="${logoDataUrl}" alt="${settings.businessName} logo"/>` : ''}
       <div>
-      <div class="company-name">${settings.businessName}</div>
-      <div class="company-detail">${settings.businessAddress}</div>
-      <div class="company-detail">Tel: ${settings.businessPhone}</div>
-      ${settings.businessEmail ? `<div class="company-detail">${settings.businessEmail}</div>` : ''}
-      <div class="company-sub">Contractors Equipment &amp; Supplies — Renting &amp; Leasing</div>
+        <div class="company-name">${settings.businessName}</div>
+        <div class="company-detail">${settings.businessAddress}</div>
+        <div class="company-detail">Tel: ${settings.businessPhone}</div>
+        ${settings.businessEmail ? `<div class="company-detail">${settings.businessEmail}</div>` : ''}
+        ${settings.businessTagline ? `<div class="company-sub">${settings.businessTagline}</div>` : ''}
       </div>
     </div>
-    <div style="text-align:right">
-      <div class="invoice-badge">INVOICE</div>
-      <div class="invoice-meta">Invoice #: <span>${invoice.id}</span></div>
-      <div class="invoice-meta">Date: <span>${format(new Date(invoice.date), 'MMMM d, yyyy')}</span></div>
-      <div class="invoice-meta">Served by: <span>${invoice.createdBy}</span></div>
+    <div>
+      <div class="inv-title">INVOICE</div>
+      <table class="meta-table">
+        <tr><td class="label">Invoice #</td><td class="value">${invoice.invoiceNumber || invoice.id}</td></tr>
+        <tr><td class="label">Date</td><td class="value">${format(new Date(invoice.date), 'MMM d, yyyy')}</td></tr>
+        <tr><td class="label">Due Date</td><td class="value">${format(dueDate, 'MMM d, yyyy')}</td></tr>
+        <tr><td class="label">Amount Due</td><td class="value">$${balanceDue.toFixed(2)}</td></tr>
+      </table>
     </div>
   </div>
 
-  <!-- Bill To / Status -->
-  <div class="meta-row">
+  <hr class="rule"/>
+
+  <!-- Parties -->
+  <div class="parties">
     <div>
       <div class="section-label">Bill To</div>
-      <div class="meta-box">
-        <div style="font-size:14px;font-weight:600;color:#111827">${invoice.customerName || 'Walk-in / General'}</div>
-        ${invoice.customerAddress ? `<div style="font-size:12px;color:#4b5563;margin-top:3px">${invoice.customerAddress}</div>` : ''}
-        ${invoice.customerPhone ? `<div style="font-size:12px;color:#4b5563;margin-top:2px">Tel: ${invoice.customerPhone}</div>` : ''}
-      </div>
+      <div class="party-name">${invoice.customerName || 'Walk-in / General'}</div>
+      ${invoice.customerAddress ? `<div class="party-detail">${invoice.customerAddress}</div>` : ''}
+      ${invoice.customerPhone ? `<div class="party-detail">Tel: ${invoice.customerPhone}</div>` : ''}
     </div>
-    <div>
-      <div class="section-label">Payment</div>
-      <div class="meta-box">
-        <div class="status-badge ${invoice.paid ? 'status-paid' : 'status-unpaid'}">
-          ${invoice.paid ? '✓ PAID IN FULL' : '⚠ PAYMENT DUE'}
-        </div>
-        <div style="font-size:12px;color:#374151;margin-top:8px">
-          Method: <strong>${invoice.paymentType || 'Cash'}</strong>
-        </div>
-      </div>
+    <div class="party-right">
+      <div class="section-label">Details</div>
+      <div class="party-detail">Served by: ${invoice.createdBy}</div>
+      <div class="party-detail">Payment method: ${invoice.paymentType || 'Cash'}</div>
+      <div class="party-detail">Status: ${invoice.paid ? 'PAID IN FULL' : 'PAYMENT DUE'}</div>
     </div>
   </div>
 
   <!-- Items -->
-  <table class="items-table">
+  <table class="items">
     <thead>
       <tr>
-        <th style="text-align:left;border-radius:6px 0 0 0">Description</th>
-        <th style="text-align:center">Qty</th>
-        <th style="text-align:right">Unit Price</th>
-        <th style="text-align:right;border-radius:0 6px 0 0">Amount</th>
+        <th class="c num">#</th>
+        <th>Description</th>
+        <th class="c">Qty</th>
+        <th class="r">Unit Price</th>
+        <th class="r">Amount</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
@@ -269,73 +203,61 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 
   <!-- Totals -->
   <div class="totals-wrap">
-    <div class="totals-box">
-      <div class="totals-row">
-        <span>Subtotal</span>
-        <span>$${invoice.subtotal.toFixed(2)}</span>
-      </div>
-      ${invoice.discount > 0 ? `
-      <div class="totals-row" style="color:#059669">
-        <span>Discount (${invoice.discount}%)</span>
-        <span>-$${discountAmount.toFixed(2)}</span>
-      </div>
-      <div class="totals-row">
-        <span>After Discount</span>
-        <span>$${afterDiscount.toFixed(2)}</span>
-      </div>` : ''}
-      <div class="totals-row">
-        <span>VAT (${invoice.vatRate}%)</span>
-        <span>$${invoice.vatAmount.toFixed(2)}</span>
-      </div>
-      <div class="totals-row grand">
-        <span>TOTAL DUE</span>
-        <span>$${invoice.total.toFixed(2)}</span>
-      </div>
-    </div>
+    <table class="totals">
+      <tr><td class="label">Subtotal</td><td class="value">$${invoice.subtotal.toFixed(2)}</td></tr>
+      ${invoice.discount > 0 ? `<tr><td class="label">Discount (${invoice.discount}%)</td><td class="value">-$${discountAmount.toFixed(2)}</td></tr>` : ''}
+      <tr><td class="label">VAT (${invoice.vatRate}%)</td><td class="value">$${invoice.vatAmount.toFixed(2)}</td></tr>
+      <tr class="grand"><td class="label">Total</td><td class="value">$${invoice.total.toFixed(2)}</td></tr>
+      <tr><td class="label">Amount Paid</td><td class="value">$${amountPaid.toFixed(2)}</td></tr>
+      <tr class="grand"><td class="label">Balance Due</td><td class="value">$${balanceDue.toFixed(2)}</td></tr>
+    </table>
   </div>
 
   <!-- Footer -->
   <div class="footer">
     <div>
-      <div class="footer-label">Payment Information</div>
-      <div class="footer-text">
-        Please make payment within 30 days.<br/>
-        Reference invoice number when paying.<br/>
-        Tel: ${settings.businessPhone}
-      </div>
+      Please make payment within 30 days, referencing the invoice number.<br/>
+      Tel: ${settings.businessPhone}${settings.businessEmail ? ` &nbsp;•&nbsp; ${settings.businessEmail}` : ''}
     </div>
     <div class="footer-right">
-      <div class="footer-label">Thank You</div>
-      <div class="footer-text">
-        We appreciate your business.<br/>
-        ${settings.businessEmail || ''}<br/>
-        ${settings.businessName}
-      </div>
+      Thank you for your business.<br/>
+      ${settings.businessName}
     </div>
   </div>
 
-  <div class="print-stamp">
-    ${settings.businessName} • ${settings.businessAddress} • ${settings.businessPhone}
-  </div>
+  <div class="page-num">Page 1 of 1</div>
 
 </div>
 </body>
 </html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;opacity:0;';
-  document.body.appendChild(iframe);
+  iframe.setAttribute('aria-hidden', 'true');
+  // Off-screen but with real A4-ish dimensions: a 0×0 / display:none iframe
+  // can print blank in Chrome because its document is never laid out.
+  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;';
 
-  const doc = iframe.contentDocument!;
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  iframe.onload = () => {
-    iframe.contentWindow!.focus();
-    iframe.contentWindow!.print();
-    setTimeout(() => document.body.removeChild(iframe), 1000);
+  // Guarded so it can only fire once, whichever trigger wins below.
+  let printed = false;
+  const triggerPrint = () => {
+    if (printed) return;
+    printed = true;
+    const win = iframe.contentWindow;
+    if (win) {
+      win.focus();
+      win.print();
+    }
+    setTimeout(() => iframe.remove(), 1000);
   };
+
+  // srcdoc fires `load` only once the document AND its images (the logo) have
+  // finished loading, so the print captures a fully rendered page. We add a
+  // small delay for final layout, plus a safety net in case load never fires.
+  iframe.srcdoc = html;
+  iframe.onload = () => setTimeout(triggerPrint, 100);
+  setTimeout(triggerPrint, 2000);
+
+  document.body.appendChild(iframe);
 }
 
 // ── Invoices list ─────────────────────────────────────────────────────────────
@@ -351,6 +273,7 @@ export function Invoices() {
     const term = searchTerm.toLowerCase();
     return invoices.filter(
       inv =>
+        (inv.invoiceNumber || '').toLowerCase().includes(term) ||
         inv.id.toLowerCase().includes(term) ||
         inv.createdBy.toLowerCase().includes(term) ||
         (inv.customerName || '').toLowerCase().includes(term) ||
@@ -389,7 +312,7 @@ export function Invoices() {
           <div className="relative">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input
-              placeholder="Search by invoice ID, user, or product..."
+              placeholder="Search by invoice #, user, or product..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -401,7 +324,7 @@ export function Invoices() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-6 py-3 text-sm text-gray-700">Invoice ID</th>
+                <th className="text-left px-6 py-3 text-sm text-gray-700">Invoice #</th>
                 <th className="text-left px-6 py-3 text-sm text-gray-700">Customer</th>
                 <th className="text-left px-6 py-3 text-sm text-gray-700">Date</th>
                 <th className="text-left px-6 py-3 text-sm text-gray-700">Items</th>
@@ -414,7 +337,7 @@ export function Invoices() {
             <tbody className="divide-y divide-gray-200">
               {filteredInvoices.map(invoice => (
                 <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-mono text-gray-900">{invoice.id}</td>
+                  <td className="px-6 py-4 text-sm font-mono text-gray-900">{invoice.invoiceNumber || invoice.id}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <p>{invoice.customerName || 'Walk-in'}</p>
                     {invoice.customerPhone && <p className="text-xs text-gray-500">{invoice.customerPhone}</p>}
@@ -491,7 +414,7 @@ export function Invoices() {
             <div key={invoice.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-mono text-gray-900 truncate">{invoice.id}</p>
+                  <p className="text-sm font-mono text-gray-900 truncate">{invoice.invoiceNumber || invoice.id}</p>
                   <p className="text-sm text-gray-900 mt-0.5">{invoice.customerName || 'Walk-in'}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {format(new Date(invoice.date), 'MMM d, yyyy')} • {invoice.items.length} item{invoice.items.length !== 1 ? 's' : ''}
@@ -588,7 +511,7 @@ function InvoiceModal({
         {/* Modal toolbar */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2 z-10">
           <div className="flex items-center gap-2 text-gray-700">
-            <span className="font-mono text-sm">{invoice.id}</span>
+            <span className="font-mono text-sm">{invoice.invoiceNumber || invoice.id}</span>
             <span className={`text-xs px-2 py-0.5 rounded ${invoice.paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
               {invoice.paid ? 'Paid' : 'Unpaid'}
             </span>
@@ -615,13 +538,13 @@ function InvoiceModal({
               <p className="text-2xl text-gray-900">{settings.businessName}</p>
               <p className="text-sm text-gray-600 mt-1">{settings.businessAddress}</p>
               <p className="text-sm text-gray-600">Tel: {settings.businessPhone}</p>
-              <p className="text-xs text-gray-500 italic mt-1">Contractors Equipment &amp; Supplies — Renting &amp; Leasing</p>
+              {settings.businessTagline && <p className="text-xs text-gray-500 italic mt-1">{settings.businessTagline}</p>}
             </div>
             <div className="text-right ml-auto">
               <div className="inline-block bg-yellow-500 text-white px-5 py-2 rounded-lg mb-3">
                 <span className="text-lg tracking-widest">INVOICE</span>
               </div>
-              <p className="text-xs text-gray-500">Invoice #: <span className="text-gray-900">{invoice.id}</span></p>
+              <p className="text-xs text-gray-500">Invoice #: <span className="text-gray-900">{invoice.invoiceNumber || invoice.id}</span></p>
               <p className="text-xs text-gray-500">Date: <span className="text-gray-900">{format(new Date(invoice.date), 'MMMM d, yyyy')}</span></p>
               <p className="text-xs text-gray-500">By: <span className="text-gray-900">{invoice.createdBy}</span></p>
             </div>

@@ -64,6 +64,7 @@ class SettingsService {
       business_address: '',
       business_phone: '',
       business_email: '',
+      business_tagline: 'Contractors Equipment & Supplies — Renting & Leasing',
       vat_rate: 17.00,
       low_stock_threshold: 5,
       sidebar_mode: 'expanded',

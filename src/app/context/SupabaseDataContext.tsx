@@ -31,6 +31,7 @@ interface SupabaseDataContextType {
   // Invoice operations
   addInvoice: (invoice: Omit<Invoice, 'id' | 'date' | 'invoiceNumber'>) => Promise<{ success: boolean; error?: string; invoiceId?: string }>
   updateInvoice: (id: string, updates: Partial<Invoice>) => Promise<{ success: boolean; error?: string }>
+  deleteInvoice: (id: string) => Promise<{ success: boolean; error?: string }>
   // Settings operations
   updateSettings: (settings: Partial<Settings>) => Promise<{ success: boolean; error?: string }>
   // Activity operations
@@ -358,6 +359,52 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const deleteInvoice = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Capture details before deletion so the audit entry can describe it.
+      const invoice = invoices.find(inv => inv.id === id)
+
+      const { data, error } = await invoicesService.deleteInvoice(id)
+
+      if (error) throw error
+
+      // RLS-denied deletes (e.g. a non-admin) come back with no error but an
+      // empty result, so confirm a row was actually removed before trusting it.
+      if (!data || data.length === 0) {
+        return { success: false, error: 'Invoice was not deleted — you may not have permission.' }
+      }
+
+      setInvoices(prev => prev.filter(inv => inv.id !== id))
+
+      // Record the deletion in the activity log. Isolated so a logging
+      // failure can't turn a successful delete into a reported failure.
+      try {
+        const currentUser = await authService.getCurrentUser()
+        const label = invoice?.invoiceNumber || id
+        await activitiesService.createActivity({
+          type: 'invoice_deleted',
+          description: invoice
+            ? `Deleted invoice ${label} — ${invoice.customerName || 'Walk-in'} — $${invoice.total.toFixed(2)}`
+            : `Deleted invoice ${label}`,
+          user_id: currentUser?.id || null,
+          metadata: {
+            invoice_id: id,
+            invoice_number: invoice?.invoiceNumber ?? null,
+            customer_name: invoice?.customerName ?? null,
+            total: invoice?.total ?? null,
+          },
+        })
+        await refreshActivities()
+      } catch (logErr) {
+        console.warn('Invoice deleted, but failed to log activity:', logErr)
+      }
+
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to delete invoice' }
+    }
+  }
+
   const updateSettings = async (updates: Partial<Settings>): Promise<{ success: boolean; error?: string }> => {
     try {
       const { data: currentSettings } = await settingsService.getOrCreateBusinessSettings()
@@ -390,7 +437,7 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
       const currentUser = await authService.getCurrentUser()
 
       const { data, error } = await activitiesService.createActivity({
-        type: activity.type as 'sale' | 'stock_update' | 'low_stock_alert',
+        type: activity.type as 'sale' | 'stock_update' | 'low_stock_alert' | 'invoice_deleted',
         description: activity.description,
         user_id: currentUser?.id || null,
         metadata: {},
@@ -420,6 +467,7 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
     upsertProducts,
     addInvoice,
     updateInvoice,
+    deleteInvoice,
     updateSettings,
     addActivity,
     refreshData,

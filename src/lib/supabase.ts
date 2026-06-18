@@ -221,7 +221,7 @@ export type Database = {
       activities: {
         Row: {
           id: string
-          type: 'sale' | 'stock_update' | 'low_stock_alert'
+          type: 'sale' | 'stock_update' | 'low_stock_alert' | 'invoice_deleted'
           description: string
           user_id: string | null
           metadata: Record<string, any>
@@ -229,7 +229,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          type: 'sale' | 'stock_update' | 'low_stock_alert'
+          type: 'sale' | 'stock_update' | 'low_stock_alert' | 'invoice_deleted'
           description: string
           user_id?: string | null
           metadata?: Record<string, any>
@@ -237,7 +237,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          type?: 'sale' | 'stock_update' | 'low_stock_alert'
+          type?: 'sale' | 'stock_update' | 'low_stock_alert' | 'invoice_deleted'
           description?: string
           user_id?: string | null
           metadata?: Record<string, any>

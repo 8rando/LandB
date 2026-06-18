@@ -109,15 +109,19 @@ class InvoicesService {
 
   async deleteInvoice(id: string) {
     try {
-      const { error } = await supabase
+      // .select() returns the rows actually deleted. Under RLS, a denied
+      // delete returns success with an empty array rather than an error, so
+      // the caller inspects `data.length` to tell "deleted" from "blocked".
+      const { data, error } = await supabase
         .from('invoices')
         .delete()
         .eq('id', id)
+        .select('id')
 
       if (error) throw error
-      return { error: null }
+      return { data, error: null }
     } catch (error) {
-      return { error: error as Error }
+      return { data: null, error: error as Error }
     }
   }
 

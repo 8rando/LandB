@@ -267,3 +267,20 @@ begin
         alter publication supabase_realtime add table user_profiles;
     end if;
 end $$;
+
+-- Invoice deletion: admins only. There was previously no DELETE policy on
+-- invoices, so RLS silently denied every delete (0 rows affected, no error) --
+-- the client thought the delete succeeded while the row remained. invoice_items
+-- rows are removed automatically via the ON DELETE CASCADE on
+-- invoice_items.invoice_id, and that cascade bypasses RLS, so no separate
+-- invoice_items delete policy is needed.
+drop policy if exists "Admins can delete invoices" on invoices;
+
+create policy "Admins can delete invoices" on invoices
+    for delete using (is_user_admin(auth.uid()));
+
+-- Audit trail for invoice deletions. Add a dedicated activity_type value so
+-- deletions don't get mislabelled as sales/stock updates (and so the
+-- type-filtered queries in activities.service stay accurate). IF NOT EXISTS
+-- keeps this re-runnable.
+alter type activity_type add value if not exists 'invoice_deleted';

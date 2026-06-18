@@ -3,7 +3,7 @@ import { Database } from '../../lib/supabase'
 
 type Activity = Database['public']['Tables']['activities']['Row']
 type ActivityInsert = Database['public']['Tables']['activities']['Insert']
-type ActivityType = 'sale' | 'stock_update' | 'low_stock_alert'
+type ActivityType = 'sale' | 'stock_update' | 'low_stock_alert' | 'invoice_deleted'
 
 class ActivitiesService {
   async getAllActivities(limit: number = 50) {

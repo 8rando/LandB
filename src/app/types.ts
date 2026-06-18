@@ -64,7 +64,7 @@ export interface Settings {
 
 export interface Activity {
   id: string;
-  type: 'sale' | 'stock_update' | 'low_stock_alert';
+  type: 'sale' | 'stock_update' | 'low_stock_alert' | 'invoice_deleted';
   description: string;
   timestamp: string;
   user?: string;

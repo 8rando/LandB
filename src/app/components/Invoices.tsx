@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useSupabaseData } from '../context/SupabaseDataContext';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, Eye, Printer, CheckCircle, XCircle, X } from 'lucide-react';
+import { Search, Eye, Printer, CheckCircle, XCircle, X, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { Invoice, Settings } from '../types';
 import lbLogo from '../../imports/lb-logo-1.png';
 
@@ -338,9 +340,11 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 
 // ── Invoices list ─────────────────────────────────────────────────────────────
 export function Invoices() {
-  const { invoices, updateInvoice, settings } = useSupabaseData();
+  const { invoices, updateInvoice, deleteInvoice, settings } = useSupabaseData();
+  const { user } = useSupabaseAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredInvoices = useMemo(() => {
     if (!searchTerm) return invoices;
@@ -356,6 +360,21 @@ export function Invoices() {
 
   const togglePaid = (invoice: Invoice) => {
     updateInvoice(invoice.id, { paid: !invoice.paid });
+  };
+
+  const handleDelete = async (invoice: Invoice) => {
+    const label = invoice.invoiceNumber || invoice.id;
+    if (!confirm(`Delete invoice ${label}? This permanently removes it and its line items and cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(invoice.id);
+    const { success, error } = await deleteInvoice(invoice.id);
+    setDeletingId(null);
+    if (success) {
+      toast.success(`Invoice ${label} deleted`);
+    } else {
+      toast.error(error || 'Failed to delete invoice');
+    }
   };
 
   return (
@@ -447,6 +466,17 @@ export function Invoices() {
                       >
                         {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
                       </Button>
+                      {user?.role === 'admin' && (
+                        <Button
+                          onClick={() => handleDelete(invoice)}
+                          disabled={deletingId === invoice.id}
+                          variant="ghost" size="sm"
+                          className="p-2 text-red-600 hover:bg-red-50"
+                          title="Delete invoice"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -504,6 +534,17 @@ export function Invoices() {
                 >
                   {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
                 </Button>
+                {user?.role === 'admin' && (
+                  <Button
+                    onClick={() => handleDelete(invoice)}
+                    disabled={deletingId === invoice.id}
+                    variant="ghost" size="sm"
+                    className="p-2 text-red-600 hover:bg-red-50"
+                    title="Delete invoice"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}

@@ -94,6 +94,15 @@ class AuthService {
     }
   }
 
+  async resolveLoginEmail(emailOrUsername: string): Promise<string> {
+    if (emailOrUsername.includes('@')) return emailOrUsername
+    const { data, error } = await supabase.rpc('get_email_by_username', {
+      p_username: emailOrUsername.toLowerCase().trim(),
+    })
+    if (error || !data) throw new Error('No account found for that username.')
+    return data as string
+  }
+
   async signIn(email: string, password: string, captchaToken?: string) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({

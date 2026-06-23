@@ -271,13 +271,13 @@ export function AuthForm() {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{mode === 'register' ? 'Email' : 'Email or Username'}</Label>
                     <Input
                       id="email"
-                      type="email"
+                      type={mode === 'register' ? 'email' : 'text'}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      placeholder={mode === 'register' ? 'you@example.com' : 'you@example.com or jsmith'}
                       required
                       disabled={loading}
                     />
@@ -296,7 +296,7 @@ export function AuthForm() {
                     />
                     {mode === 'register' && (
                       <p className="text-xs text-muted-foreground">
-                        At least 8 characters with a lowercase letter, an uppercase letter, a number, and a special character.
+                        At least 12 characters with a lowercase letter, an uppercase letter, a number, and a special character.
                       </p>
                     )}
                   </div>

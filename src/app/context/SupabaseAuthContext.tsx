@@ -34,9 +34,9 @@ const SESSION_ID_KEY = 'lanims_active_session_id'
 
 // Mirrors the Supabase Auth password policy (lower + upper + digit + special).
 // Keep this in sync with Dashboard → Authentication → Policies.
-const PASSWORD_MIN_LENGTH = 8
+const PASSWORD_MIN_LENGTH = 12
 const PASSWORD_REQUIREMENTS_MESSAGE =
-  'Password must be at least 8 characters and include a lowercase letter, an uppercase letter, a number, and a special character.'
+  'Password must be at least 12 characters and include a lowercase letter, an uppercase letter, a number, and a special character.'
 
 function validatePassword(password: string): string | null {
   if (password.length < PASSWORD_MIN_LENGTH) return PASSWORD_REQUIREMENTS_MESSAGE
@@ -193,7 +193,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { user: signedInUser, error } = await authService.signIn(email, password, captchaToken)
+      let resolvedEmail = email
+      try {
+        resolvedEmail = await authService.resolveLoginEmail(email)
+      } catch {
+        return { success: false, error: 'No account found for that username.' }
+      }
+
+      const { user: signedInUser, error } = await authService.signIn(resolvedEmail, password, captchaToken)
 
       if (error) {
         // An unconfirmed email isn't a wrong password — don't count it toward lockout.

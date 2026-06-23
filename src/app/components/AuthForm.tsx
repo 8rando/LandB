@@ -97,10 +97,7 @@ export function AuthForm() {
           email,
           password,
           username,
-          // Don't pass captcha token on signup — Supabase double-verifies it
-          // when email confirmation is enabled, causing already-seen-response.
-          // Signup is gated by the email allowlist + confirmation email instead.
-          undefined,
+          tokenForRequest,
         )
         if (!success) {
           setError(signUpError || 'Registration failed')

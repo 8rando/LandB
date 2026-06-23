@@ -74,13 +74,17 @@ export function AuthForm() {
 
     setLoading(true)
 
+    // Captcha tokens are single-use — snapshot and immediately invalidate so
+    // nothing can replay this one (StrictMode re-renders, double-clicks, etc.).
+    const tokenForRequest = captchaToken ?? undefined
+    resetCaptcha()
+
     try {
       if (mode === 'login') {
-        const { success, error: signInError } = await signIn(email, password, captchaToken ?? undefined)
+        const { success, error: signInError } = await signIn(email, password, tokenForRequest)
         if (!success) {
           setError(signInError || 'Login failed')
           setPassword('')
-          resetCaptcha()
         }
       } else {
         if (password !== confirmPassword) {
@@ -93,20 +97,16 @@ export function AuthForm() {
           email,
           password,
           username,
-          captchaToken ?? undefined,
+          tokenForRequest,
         )
         if (!success) {
           setError(signUpError || 'Registration failed')
-          resetCaptcha()
         } else if (needsEmailConfirmation) {
           setPendingConfirmationEmail(email)
-          // Token was just consumed by signUp — clear it so Resend gets a fresh one.
-          resetCaptcha()
         }
       }
     } catch (err) {
       setError('An unexpected error occurred')
-      resetCaptcha()
     } finally {
       setLoading(false)
     }
@@ -121,12 +121,13 @@ export function AuthForm() {
     setLoading(true)
     setError('')
     setInfo('')
+    const tokenForRequest = captchaToken ?? undefined
+    resetCaptcha()
     const { success, error: resendError } = await resendConfirmation(
       pendingConfirmationEmail,
-      captchaToken ?? undefined,
+      tokenForRequest,
     )
     setLoading(false)
-    resetCaptcha()
     if (success) {
       setInfo('Confirmation email resent. Check your inbox (and spam folder).')
     } else {

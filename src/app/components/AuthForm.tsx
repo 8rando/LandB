@@ -100,6 +100,8 @@ export function AuthForm() {
           resetCaptcha()
         } else if (needsEmailConfirmation) {
           setPendingConfirmationEmail(email)
+          // Token was just consumed by signUp — clear it so Resend gets a fresh one.
+          resetCaptcha()
         }
       }
     } catch (err) {

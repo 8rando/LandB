@@ -43,7 +43,7 @@ function validatePassword(password: string): string | null {
   if (!/[a-z]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
   if (!/[A-Z]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
   if (!/[0-9]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|<>?,./`~]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
+  if (!/[^A-Za-z0-9]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
   return null
 }
 

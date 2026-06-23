@@ -10,16 +10,35 @@ export type AuthUser = {
 }
 
 class AuthService {
-  async signUp(email: string, password: string, username: string, role: UserRole = 'cashier') {
+  async signUp(email: string, password: string, username: string, role: UserRole = 'cashier', captchaToken?: string) {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          captchaToken,
+          // Stash the chosen username so it survives until the first confirmed
+          // login, when the profile row is actually created. Role is decided
+          // then (never trusted from the client) — see ensureUserProfile.
+          data: { username: username.toLowerCase().trim() },
+          // Return the email-confirmation link to the running app so
+          // detectSessionInUrl can establish the session on click.
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
       })
 
       if (authError) throw authError
       if (!authData.user) throw new Error('Failed to create user')
 
+      // With "Confirm email" enabled, signUp returns no session. Defer profile
+      // creation to the first confirmed login (ensureUserProfile), since an
+      // unauthenticated insert would be blocked by RLS.
+      if (!authData.session) {
+        return { user: authData.user, needsEmailConfirmation: true, error: null }
+      }
+
+      // Confirmation disabled (autoconfirm): a session exists now, so create the
+      // profile immediately, preserving the prior behaviour.
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
@@ -32,17 +51,55 @@ class AuthService {
         throw profileError
       }
 
-      return { user: authData.user, error: null }
+      return { user: authData.user, needsEmailConfirmation: false, error: null }
     } catch (error) {
-      return { user: null, error: error as Error }
+      return { user: null, needsEmailConfirmation: false, error: error as Error }
     }
   }
 
-  async signIn(email: string, password: string) {
+  // Creates the current user's profile row if it doesn't exist yet. Called on
+  // the first confirmed login (when a session finally exists). Role is computed
+  // here — the very first profile becomes admin — never taken from the client.
+  async ensureUserProfile(): Promise<{ created: boolean; role: UserRole | null; error: Error | null }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { created: false, role: null, error: new Error('No authenticated user') }
+
+      const { data: existing } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (existing) return { created: false, role: existing.role, error: null }
+
+      const { count } = await supabase
+        .from('user_profiles')
+        .select('id', { count: 'exact', head: true })
+
+      const role: UserRole = (count ?? 0) === 0 ? 'admin' : 'cashier'
+      const username = ((user.user_metadata?.username as string | undefined) || user.email?.split('@')[0] || 'user')
+        .toLowerCase()
+        .trim()
+
+      const { error: insertError } = await supabase
+        .from('user_profiles')
+        .insert({ id: user.id, username, role })
+
+      if (insertError) throw insertError
+
+      return { created: true, role, error: null }
+    } catch (error) {
+      return { created: false, role: null, error: error as Error }
+    }
+  }
+
+  async signIn(email: string, password: string, captchaToken?: string) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { captchaToken },
       })
 
       if (error) throw error
@@ -129,8 +186,20 @@ class AuthService {
     return supabase.auth.onAuthStateChange(callback)
   }
 
-  async resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+  async resetPassword(email: string, captchaToken?: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { captchaToken })
+    return { error }
+  }
+
+  async resendConfirmation(email: string, captchaToken?: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        captchaToken,
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
+    })
     return { error }
   }
 

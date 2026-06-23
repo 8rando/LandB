@@ -19,6 +19,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+// Public hCaptcha site key (safe to ship in the client bundle). The matching
+// secret key is configured only in the Supabase dashboard, never here. When
+// unset, the auth forms skip the captcha so the app still runs before setup.
+export const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined
+
 export type Database = {
   public: {
     Tables: {

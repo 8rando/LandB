@@ -6,11 +6,12 @@ interface SupabaseAuthContextType {
   user: AuthUser | null
   loading: boolean
   session: Session | null
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  signUp: (email: string, password: string, username: string) => Promise<{ success: boolean; error?: string }>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>
+  signUp: (email: string, password: string, username: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; needsEmailConfirmation?: boolean }>
   signOut: () => Promise<void>
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>
+  resendConfirmation: (email: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>
   // User management (admin only)
   users: AuthUser[]
   createUser: (email: string, password: string, username: string, role: UserRole) => Promise<{ success: boolean; error?: string }>
@@ -31,6 +32,21 @@ const MAX_ATTEMPTS = 3
 const LOCKOUT_DURATION = 60000
 const SESSION_ID_KEY = 'lanims_active_session_id'
 
+// Mirrors the Supabase Auth password policy (lower + upper + digit + special).
+// Keep this in sync with Dashboard → Authentication → Policies.
+const PASSWORD_MIN_LENGTH = 8
+const PASSWORD_REQUIREMENTS_MESSAGE =
+  'Password must be at least 8 characters and include a lowercase letter, an uppercase letter, a number, and a special character.'
+
+function validatePassword(password: string): string | null {
+  if (password.length < PASSWORD_MIN_LENGTH) return PASSWORD_REQUIREMENTS_MESSAGE
+  if (!/[a-z]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
+  if (!/[A-Z]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
+  if (!/[0-9]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|<>?,./`~]/.test(password)) return PASSWORD_REQUIREMENTS_MESSAGE
+  return null
+}
+
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [users, setUsers] = useState<AuthUser[]>([])
@@ -42,15 +58,40 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [sessionConflict, setSessionConflict] = useState(false)
 
   useEffect(() => {
+    // Resolve the AuthUser for a session. On the first confirmed login the
+    // profile row doesn't exist yet (creation is deferred from signup), so
+    // create it here, bootstrap settings for the first/admin user, and claim
+    // this device's session if a normal signIn hasn't already done so.
+    const resolveUser = async (currentSession: Session | null) => {
+      if (!currentSession?.user) {
+        setUser(null)
+        return
+      }
+
+      let currentUser = await authService.getCurrentUser()
+
+      if (!currentUser) {
+        const { role } = await authService.ensureUserProfile()
+        if (role === 'admin') {
+          await settingsService.getOrCreateBusinessSettings()
+        }
+        currentUser = await authService.getCurrentUser()
+
+        if (currentUser && !localStorage.getItem(SESSION_ID_KEY)) {
+          const sessionId = crypto.randomUUID()
+          localStorage.setItem(SESSION_ID_KEY, sessionId)
+          await authService.claimActiveSession(currentUser.id, sessionId)
+        }
+      }
+
+      setUser(currentUser)
+    }
+
     const loadSession = async () => {
       try {
         const currentSession = await authService.getSession()
         setSession(currentSession)
-
-        if (currentSession?.user) {
-          const currentUser = await authService.getCurrentUser()
-          setUser(currentUser)
-        }
+        await resolveUser(currentSession)
       } catch (error) {
         console.error('Error loading session:', error)
       } finally {
@@ -62,13 +103,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
       setSession(session)
-
-      if (session?.user) {
-        const currentUser = await authService.getCurrentUser()
-        setUser(currentUser)
-      } else {
-        setUser(null)
-      }
+      await resolveUser(session)
     })
 
     const loadLockoutState = () => {
@@ -152,15 +187,20 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer)
   }, [isLocked])
 
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const signIn = async (email: string, password: string, captchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     if (isLocked) {
       return { success: false, error: `Account locked. Try again in ${lockoutTime} seconds.` }
     }
 
     try {
-      const { user: signedInUser, error } = await authService.signIn(email, password)
+      const { user: signedInUser, error } = await authService.signIn(email, password, captchaToken)
 
       if (error) {
+        // An unconfirmed email isn't a wrong password — don't count it toward lockout.
+        if (/not confirmed/i.test(error.message)) {
+          return { success: false, error: 'Please confirm your email first — check your inbox for the confirmation link.' }
+        }
+
         const next = failedAttempts + 1
         setFailedAttempts(next)
 
@@ -195,14 +235,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (
     email: string,
     password: string,
-    username: string
-  ): Promise<{ success: boolean; error?: string }> => {
+    username: string,
+    captchaToken?: string
+  ): Promise<{ success: boolean; error?: string; needsEmailConfirmation?: boolean }> => {
     try {
       if (username.trim().length < 3) {
         return { success: false, error: 'Username must be at least 3 characters' }
       }
-      if (password.length < 6) {
-        return { success: false, error: 'Password must be at least 6 characters' }
+      const passwordError = validatePassword(password)
+      if (passwordError) {
+        return { success: false, error: passwordError }
       }
 
       const { available } = await usersService.checkUsernameAvailability(username)
@@ -210,14 +252,22 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Username already exists' }
       }
 
-      // The first account ever registered becomes the administrator
+      // The first account ever registered becomes the administrator. Used only
+      // on the autoconfirm path; when email confirmation is on, the role is
+      // (re)decided at first confirmed login in ensureUserProfile.
       const { userCount } = await databaseService.getHealthStatus()
       const role: UserRole = userCount === 0 ? 'admin' : 'cashier'
 
-      const { user: signedUpUser, error } = await authService.signUp(email, password, username, role)
+      const { user: signedUpUser, needsEmailConfirmation, error } = await authService.signUp(email, password, username, role, captchaToken)
 
       if (error) {
         return { success: false, error: error.message }
+      }
+
+      // Email confirmation required: no session yet, profile/settings/session
+      // are bootstrapped on the first confirmed login instead.
+      if (needsEmailConfirmation) {
+        return { success: true, needsEmailConfirmation: true }
       }
 
       if (role === 'admin') {
@@ -231,7 +281,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
 
       await refreshUsers()
-      return { success: true }
+      return { success: true, needsEmailConfirmation: false }
     } catch (error) {
       return { success: false, error: 'An unexpected error occurred' }
     }
@@ -260,8 +310,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
   const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      if (newPassword.length < 6) {
-        return { success: false, error: 'Password must be at least 6 characters' }
+      const passwordError = validatePassword(newPassword)
+      if (passwordError) {
+        return { success: false, error: passwordError }
       }
 
       const { error } = await authService.updatePassword(newPassword)
@@ -276,9 +327,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+  const resetPassword = async (email: string, captchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { error } = await authService.resetPassword(email)
+      const { error } = await authService.resetPassword(email, captchaToken)
 
       if (error) {
         return { success: false, error: error.message }
@@ -286,6 +337,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       return { success: true }
     } catch (error) {
+      return { success: false, error: 'An unexpected error occurred' }
+    }
+  }
+
+  const resendConfirmation = async (email: string, captchaToken?: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await authService.resendConfirmation(email, captchaToken)
+      if (error) return { success: false, error: error.message }
+      return { success: true }
+    } catch {
       return { success: false, error: 'An unexpected error occurred' }
     }
   }
@@ -303,8 +364,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (username.trim().length < 3) {
       return { success: false, error: 'Username must be at least 3 characters' }
     }
-    if (password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters' }
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      return { success: false, error: passwordError }
     }
 
     const { available } = await usersService.checkUsernameAvailability(username)
@@ -393,6 +455,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     signOut,
     updatePassword,
     resetPassword,
+    resendConfirmation,
     users,
     createUser,
     deleteUser,

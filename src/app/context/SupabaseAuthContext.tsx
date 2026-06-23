@@ -24,6 +24,9 @@ interface SupabaseAuthContextType {
   // Set when this device's session was superseded by a login elsewhere
   sessionConflict: boolean
   clearSessionConflict: () => void
+  // Set when the user arrives via a password-reset email link
+  isPasswordRecovery: boolean
+  clearPasswordRecovery: () => void
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined)
@@ -56,6 +59,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [isLocked, setIsLocked] = useState(false)
   const [lockoutTime, setLockoutTime] = useState(0)
   const [sessionConflict, setSessionConflict] = useState(false)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
 
   useEffect(() => {
     // Resolve the AuthUser for a session. On the first confirmed login the
@@ -102,6 +106,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     loadSession()
 
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true)
+        setSession(session)
+        return
+      }
       setSession(session)
       await resolveUser(session)
     })
@@ -314,6 +323,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const clearSessionConflict = () => setSessionConflict(false)
+  const clearPasswordRecovery = () => setIsPasswordRecovery(false)
 
   const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -472,6 +482,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     lockoutTime,
     sessionConflict,
     clearSessionConflict,
+    isPasswordRecovery,
+    clearPasswordRecovery,
   }
 
   return (

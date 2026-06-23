@@ -196,7 +196,10 @@ class AuthService {
   }
 
   async resetPassword(email: string, captchaToken?: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { captchaToken })
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      captchaToken,
+      redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+    })
     return { error }
   }
 

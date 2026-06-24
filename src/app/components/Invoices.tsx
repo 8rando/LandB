@@ -53,7 +53,7 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Invoice ${invoice.invoiceNumber || invoice.id} — ${settings.businessName}</title>
+  <title>Invoice ${format(new Date(invoice.date), 'dd.MM.yyyy')} — ${settings.businessName}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {

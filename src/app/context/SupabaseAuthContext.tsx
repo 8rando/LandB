@@ -93,9 +93,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     const loadSession = async () => {
       try {
+        // If this is a password-recovery redirect, skip resolveUser and let
+        // onAuthStateChange handle it — otherwise user gets set first and the
+        // navigate effect fires before isPasswordRecovery can be set to true.
+        const isRecovery =
+          typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
         const currentSession = await authService.getSession()
         setSession(currentSession)
-        await resolveUser(currentSession)
+        if (!isRecovery) {
+          await resolveUser(currentSession)
+        }
       } catch (error) {
         console.error('Error loading session:', error)
       } finally {

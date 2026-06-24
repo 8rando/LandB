@@ -96,11 +96,15 @@ const transformSupabaseSettings = (supabaseSettings: SupabaseSettings): Settings
   sidebarMode: supabaseSettings.sidebar_mode,
 })
 
-const transformSupabaseActivity = (supabaseActivity: SupabaseActivity): Activity => ({
+const transformSupabaseActivity = (
+  supabaseActivity: SupabaseActivity & { user_profile?: { username: string } | null }
+): Activity => ({
   id: supabaseActivity.id,
   type: supabaseActivity.type,
   description: supabaseActivity.description,
-  user: 'System', // We'll need to join this properly
+  // Show who performed the action; fall back to System for activities with no
+  // associated user (e.g. automated low-stock alerts).
+  user: supabaseActivity.user_profile?.username || 'System',
   timestamp: supabaseActivity.created_at,
 })
 

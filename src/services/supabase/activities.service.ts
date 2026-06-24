@@ -10,7 +10,7 @@ class ActivitiesService {
     try {
       const { data, error } = await supabase
         .from('activities')
-        .select('*')
+        .select('*, user_profile:user_profiles (username)')
         .order('created_at', { ascending: false })
         .limit(limit)
 

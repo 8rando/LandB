@@ -31,6 +31,7 @@ interface SupabaseDataContextType {
   // Invoice operations
   addInvoice: (invoice: Omit<Invoice, 'id' | 'date' | 'invoiceNumber'>) => Promise<{ success: boolean; error?: string; invoiceId?: string }>
   updateInvoice: (id: string, updates: Partial<Invoice>) => Promise<{ success: boolean; error?: string }>
+  voidInvoice: (id: string) => Promise<{ success: boolean; error?: string }>
   deleteInvoice: (id: string) => Promise<{ success: boolean; error?: string }>
   // Settings operations
   updateSettings: (settings: Partial<Settings>) => Promise<{ success: boolean; error?: string }>
@@ -81,6 +82,9 @@ const transformSupabaseInvoice = (supabaseInvoice: InvoiceWithItems): Invoice =>
   vatAmount: Number(supabaseInvoice.vat_amount),
   total: Number(supabaseInvoice.total),
   paid: supabaseInvoice.paid,
+  voided: supabaseInvoice.voided ?? false,
+  voidedAt: supabaseInvoice.voided_at || undefined,
+  voidedBy: supabaseInvoice.voided_by || undefined,
   paymentType: supabaseInvoice.payment_type as Invoice['paymentType'],
   date: supabaseInvoice.created_at,
 })
@@ -365,6 +369,50 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Mark an invoice permanently void instead of deleting it — keeps it on
+  // record (stamped VOID on preview/print) and stamps who voided it when.
+  const voidInvoice = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const invoice = invoices.find(inv => inv.id === id)
+      const currentUser = await authService.getCurrentUser()
+
+      const { error } = await invoicesService.updateInvoice(id, {
+        voided: true,
+        voided_at: new Date().toISOString(),
+        voided_by: currentUser?.id || null,
+      } as any)
+
+      if (error) throw error
+
+      await refreshInvoices()
+
+      try {
+        const label = invoice?.invoiceNumber || id
+        await activitiesService.createActivity({
+          type: 'invoice_deleted',
+          description: invoice
+            ? `Voided invoice ${label} — ${invoice.customerName || 'Walk-in'} — $${invoice.total.toFixed(2)}`
+            : `Voided invoice ${label}`,
+          user_id: currentUser?.id || null,
+          metadata: {
+            invoice_id: id,
+            invoice_number: invoice?.invoiceNumber ?? null,
+            customer_name: invoice?.customerName ?? null,
+            total: invoice?.total ?? null,
+            action: 'void',
+          },
+        })
+        await refreshActivities()
+      } catch (logErr) {
+        console.warn('Invoice voided, but failed to log activity:', logErr)
+      }
+
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to void invoice' }
+    }
+  }
+
   const deleteInvoice = async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
       // Capture details before deletion so the audit entry can describe it.
@@ -474,6 +522,7 @@ export function SupabaseDataProvider({ children }: { children: ReactNode }) {
     upsertProducts,
     addInvoice,
     updateInvoice,
+    voidInvoice,
     deleteInvoice,
     updateSettings,
     addActivity,

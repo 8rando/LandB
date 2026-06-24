@@ -3,7 +3,7 @@ import { useSupabaseData } from '../context/SupabaseDataContext';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, Eye, Printer, CheckCircle, XCircle, X, Trash2 } from 'lucide-react';
+import { Search, Eye, Printer, CheckCircle, XCircle, X, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Invoice, Settings } from '../types';
@@ -53,7 +53,7 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Invoice ${format(new Date(invoice.date), 'dd.MM.yyyy')} — ${settings.businessName}</title>
+  <title>${invoice.voided ? 'VOID ' : ''}Invoice ${format(new Date(invoice.date), 'yyyy-MM-dd')} ${settings.businessName}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -69,6 +69,26 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
       padding: 16mm 16mm 14mm 16mm;
       display: flex;
       flex-direction: column;
+      position: relative;
+    }
+    /* ── VOID watermark ── */
+    .void-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-32deg);
+      font-size: 150px;
+      font-weight: 800;
+      letter-spacing: 14px;
+      color: rgba(220, 38, 38, 0.16);
+      border: 10px solid rgba(220, 38, 38, 0.16);
+      border-radius: 16px;
+      padding: 8px 56px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 999;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     /* ── Header ── */
     .header {
@@ -145,6 +165,7 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 </head>
 <body>
 <div class="page">
+  ${invoice.voided ? '<div class="void-mark">VOID</div>' : ''}
 
   <!-- Header -->
   <div class="header">
@@ -262,11 +283,12 @@ async function printInvoice(invoice: Invoice, settings: Settings) {
 
 // ── Invoices list ─────────────────────────────────────────────────────────────
 export function Invoices() {
-  const { invoices, updateInvoice, deleteInvoice, settings } = useSupabaseData();
+  const { invoices, updateInvoice, voidInvoice, settings } = useSupabaseData();
   const { user } = useSupabaseAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [voidingId, setVoidingId] = useState<string | null>(null);
 
   const filteredInvoices = useMemo(() => {
     if (!searchTerm) return invoices;
@@ -285,18 +307,18 @@ export function Invoices() {
     updateInvoice(invoice.id, { paid: !invoice.paid });
   };
 
-  const handleDelete = async (invoice: Invoice) => {
+  const handleVoid = async (invoice: Invoice) => {
     const label = invoice.invoiceNumber || invoice.id;
-    if (!confirm(`Delete invoice ${label}? This permanently removes it and its line items and cannot be undone.`)) {
+    if (!confirm(`Void invoice ${label}? It will be permanently marked VOID and can no longer be edited, but stays on record and can still be viewed and printed.`)) {
       return;
     }
-    setDeletingId(invoice.id);
-    const { success, error } = await deleteInvoice(invoice.id);
-    setDeletingId(null);
+    setVoidingId(invoice.id);
+    const { success, error } = await voidInvoice(invoice.id);
+    setVoidingId(null);
     if (success) {
-      toast.success(`Invoice ${label} deleted`);
+      toast.success(`Invoice ${label} voided`);
     } else {
-      toast.error(error || 'Failed to delete invoice');
+      toast.error(error || 'Failed to void invoice');
     }
   };
 
@@ -355,12 +377,19 @@ export function Invoices() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs gap-1 ${
-                      invoice.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {invoice.paid ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                      {invoice.paid ? 'Paid' : 'Unpaid'}
-                    </span>
+                    {invoice.voided ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs gap-1 bg-red-100 text-red-800">
+                        <Ban className="w-3 h-3" />
+                        Void
+                      </span>
+                    ) : (
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs gap-1 ${
+                        invoice.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {invoice.paid ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        {invoice.paid ? 'Paid' : 'Unpaid'}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -378,26 +407,28 @@ export function Invoices() {
                       >
                         <Printer className="w-4 h-4" />
                       </Button>
-                      <Button
-                        onClick={() => togglePaid(invoice)}
-                        variant="ghost" size="sm"
-                        className={`px-3 py-1 text-xs ${
-                          invoice.paid
-                            ? 'text-yellow-600 hover:bg-yellow-50'
-                            : 'text-green-600 hover:bg-green-50'
-                        }`}
-                      >
-                        {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
-                      </Button>
-                      {user?.role === 'admin' && (
+                      {isAdmin && !invoice.voided && (
                         <Button
-                          onClick={() => handleDelete(invoice)}
-                          disabled={deletingId === invoice.id}
+                          onClick={() => togglePaid(invoice)}
+                          variant="ghost" size="sm"
+                          className={`px-3 py-1 text-xs ${
+                            invoice.paid
+                              ? 'text-yellow-600 hover:bg-yellow-50'
+                              : 'text-green-600 hover:bg-green-50'
+                          }`}
+                        >
+                          {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
+                        </Button>
+                      )}
+                      {isAdmin && !invoice.voided && (
+                        <Button
+                          onClick={() => handleVoid(invoice)}
+                          disabled={voidingId === invoice.id}
                           variant="ghost" size="sm"
                           className="p-2 text-red-600 hover:bg-red-50"
-                          title="Delete invoice"
+                          title="Void invoice"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Ban className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
@@ -422,12 +453,19 @@ export function Invoices() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-sm text-gray-900">${invoice.total.toFixed(2)}</p>
-                  <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs gap-1 ${
-                    invoice.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {invoice.paid ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                    {invoice.paid ? 'Paid' : 'Unpaid'}
-                  </span>
+                  {invoice.voided ? (
+                    <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs gap-1 bg-red-100 text-red-800">
+                      <Ban className="w-3 h-3" />
+                      Void
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs gap-1 ${
+                      invoice.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {invoice.paid ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                      {invoice.paid ? 'Paid' : 'Unpaid'}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -446,26 +484,28 @@ export function Invoices() {
                 >
                   <Printer className="w-4 h-4" />
                 </Button>
-                <Button
-                  onClick={() => togglePaid(invoice)}
-                  variant="ghost" size="sm"
-                  className={`px-3 py-1 text-xs ${
-                    invoice.paid
-                      ? 'text-yellow-600 hover:bg-yellow-50'
-                      : 'text-green-600 hover:bg-green-50'
-                  }`}
-                >
-                  {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
-                </Button>
-                {user?.role === 'admin' && (
+                {isAdmin && !invoice.voided && (
                   <Button
-                    onClick={() => handleDelete(invoice)}
-                    disabled={deletingId === invoice.id}
+                    onClick={() => togglePaid(invoice)}
+                    variant="ghost" size="sm"
+                    className={`px-3 py-1 text-xs ${
+                      invoice.paid
+                        ? 'text-yellow-600 hover:bg-yellow-50'
+                        : 'text-green-600 hover:bg-green-50'
+                    }`}
+                  >
+                    {invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
+                  </Button>
+                )}
+                {isAdmin && !invoice.voided && (
+                  <Button
+                    onClick={() => handleVoid(invoice)}
+                    disabled={voidingId === invoice.id}
                     variant="ghost" size="sm"
                     className="p-2 text-red-600 hover:bg-red-50"
-                    title="Delete invoice"
+                    title="Void invoice"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Ban className="w-4 h-4" />
                   </Button>
                 )}
               </div>
@@ -512,9 +552,13 @@ function InvoiceModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2 z-10">
           <div className="flex items-center gap-2 text-gray-700">
             <span className="font-mono text-sm">{invoice.invoiceNumber || invoice.id}</span>
-            <span className={`text-xs px-2 py-0.5 rounded ${invoice.paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-              {invoice.paid ? 'Paid' : 'Unpaid'}
-            </span>
+            {invoice.voided ? (
+              <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700">Void</span>
+            ) : (
+              <span className={`text-xs px-2 py-0.5 rounded ${invoice.paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                {invoice.paid ? 'Paid' : 'Unpaid'}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -531,7 +575,17 @@ function InvoiceModal({
         </div>
 
         {/* Invoice preview (screen-only, not what gets printed) */}
-        <div className="p-4 sm:p-8">
+        <div className="p-4 sm:p-8 relative">
+          {invoice.voided && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden z-20">
+              <span
+                className="text-red-600/20 border-[6px] border-red-600/20 rounded-2xl px-10 py-2 font-extrabold tracking-[0.2em] whitespace-nowrap"
+                style={{ fontSize: '90px', transform: 'rotate(-32deg)' }}
+              >
+                VOID
+              </span>
+            </div>
+          )}
           {/* Header */}
           <div className="flex flex-wrap items-start justify-between gap-4 pb-6 mb-6 border-b-4 border-yellow-500">
             <div>

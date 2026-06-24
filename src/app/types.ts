@@ -31,6 +31,9 @@ export interface Invoice {
   vatAmount: number;
   total: number;
   paid: boolean;
+  voided?: boolean;
+  voidedAt?: string;
+  voidedBy?: string;
   createdBy: string;
   customerName: string;
   customerAddress?: string;

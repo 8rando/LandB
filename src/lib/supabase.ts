@@ -113,6 +113,9 @@ export type Database = {
           vat_amount: number
           total: number
           paid: boolean
+          voided: boolean
+          voided_at: string | null
+          voided_by: string | null
           payment_type: 'Cash' | 'Credit' | 'Debit' | 'Cheque'
           created_by: string | null
           created_at: string
@@ -130,6 +133,9 @@ export type Database = {
           vat_amount?: number
           total?: number
           paid?: boolean
+          voided?: boolean
+          voided_at?: string | null
+          voided_by?: string | null
           payment_type?: 'Cash' | 'Credit' | 'Debit' | 'Cheque'
           created_by?: string | null
           created_at?: string
@@ -147,6 +153,9 @@ export type Database = {
           vat_amount?: number
           total?: number
           paid?: boolean
+          voided?: boolean
+          voided_at?: string | null
+          voided_by?: string | null
           payment_type?: 'Cash' | 'Credit' | 'Debit' | 'Cheque'
           created_by?: string | null
           created_at?: string

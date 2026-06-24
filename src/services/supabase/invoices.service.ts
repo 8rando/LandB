@@ -19,7 +19,7 @@ class InvoicesService {
         .select(`
           *,
           invoice_items (*),
-          created_by_profile:user_profiles (username)
+          created_by_profile:user_profiles!invoices_created_by_fkey (username)
         `)
         .order('created_at', { ascending: false })
 
